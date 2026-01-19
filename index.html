@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>基礎記帳 V24 (專案獨立設定)</title>
+    <title>基礎記帳 V25 (AI進度條版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -173,6 +173,12 @@
             transition: all 0.2s;
         }
         .fab-btn:active { transform: scale(0.95); background-color: #5a7a5d; }
+
+        /* Progress Bar Animation */
+        @keyframes progress-stripe {
+            0% { background-position: 1rem 0; }
+            100% { background-position: 0 0; }
+        }
     </style>
 </head>
 <body>
@@ -430,11 +436,14 @@
                 }, "刪除資料");
             };
 
+            // Enhanced Filter Logic with Search
             const filteredExpenses = React.useMemo(() => {
                 let result = expenses;
+                // Category Filter
                 if (filterCategory !== 'All') {
                     result = result.filter(e => e.category === filterCategory);
                 }
+                // Search Filter
                 if (searchTerm.trim()) {
                     const lowerTerm = searchTerm.toLowerCase().trim();
                     result = result.filter(e => 
@@ -600,7 +609,7 @@
                     <div className="flex justify-between items-start mb-1">
                         <div>
                             <span className="text-sage-50 text-xs uppercase tracking-wider block font-medium opacity-90">Project</span>
-                            <h2 className="font-bold text-lg leading-tight tracking-wide">{tripId}</h2>
+                            <h2 className="font-bold text-xl leading-tight tracking-wide">{tripId}</h2>
                         </div>
                         <div className="flex gap-1 bg-white/10 rounded-full p-1 backdrop-blur-sm">
                             <button onClick={onStats} className="w-9 h-9 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors" title="統計"><i className="fa-solid fa-chart-pie text-lg"></i></button>
@@ -611,7 +620,7 @@
                     <div className="overflow-x-auto no-scrollbar">
                         <div className="text-xs text-sage-50 mb-1 font-medium opacity-90">{filterCategory === 'All' ? '總花費' : `${filterCategory} 小計`}</div>
                         <div className="flex gap-5">
-                            {Object.keys(totals).length === 0 ? <span className="text-xl font-bold">NT$ 0</span> : Object.entries(totals).map(([curr, val]) => (
+                            {Object.keys(totals).length === 0 ? <span className="text-2xl font-bold">NT$ 0</span> : Object.entries(totals).map(([curr, val]) => (
                                 <div key={curr} className="flex-shrink-0">
                                     <div className="flex items-baseline gap-2">
                                         <span className="text-2xl font-bold tracking-tight">{curr} {Number(val.amt).toLocaleString()}</span>
@@ -624,6 +633,25 @@
                 </div>
             );
         };
+
+        // --- Processing Modal (Progress Bar) ---
+        const ProcessingModal = ({ progress }) => (
+            <div className="fixed inset-0 bg-stone-800/40 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 fade-in">
+                <div className="bg-white rounded-2xl shadow-xl w-full max-w-xs p-6 text-center border border-stone-100">
+                    <div className="w-16 h-16 mx-auto mb-4 relative flex items-center justify-center">
+                         <div className="loader w-full h-full border-4 border-stone-100 border-t-sage-400"></div>
+                         <i className="fa-solid fa-wand-magic-sparkles text-sage-400 absolute text-xl"></i>
+                    </div>
+                    <h3 className="font-bold text-lg mb-2 text-stone-700">AI 辨識中...</h3>
+                    <p className="text-stone-500 text-sm mb-4">正在分析收據內容</p>
+                    
+                    <div className="w-full bg-stone-100 rounded-full h-2.5 mb-2 overflow-hidden border border-stone-200">
+                        <div className="bg-sage-400 h-2.5 rounded-full transition-all duration-300 ease-out" style={{ width: `${progress}%` }}></div>
+                    </div>
+                    <p className="text-xs text-stone-400 font-mono">{progress}%</p>
+                </div>
+            </div>
+        );
 
         // --- API Key Rescue Modal ---
         const ApiKeyRescueModal = ({ onSave, onCancel }) => {
@@ -835,6 +863,10 @@
             const [newCatName, setNewCatName] = React.useState("");
             const [classifying, setClassifying] = React.useState(false);
             const [showRescueModal, setShowRescueModal] = React.useState(false);
+            
+            // Progress Bar State
+            const [progress, setProgress] = React.useState(0);
+
             const fileRef = React.useRef(null);
 
             React.useEffect(() => { if (initialData) setForm(initialData); }, [initialData]);
@@ -907,7 +939,20 @@
                     setShowRescueModal(true);
                     e.target.value = ''; return; 
                 }
+                
+                // Initialize Loading & Progress
                 setLoading(true);
+                setProgress(5); // Start
+                
+                // Fake Progress Interval
+                const interval = setInterval(() => {
+                    setProgress(prev => {
+                        if (prev >= 90) return 90;
+                        const increment = prev < 60 ? 5 : 2;
+                        return prev + increment;
+                    });
+                }, 200);
+
                 try {
                     const reader = new FileReader();
                     reader.readAsDataURL(file);
@@ -930,6 +975,10 @@
                             body: JSON.stringify({ contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: file.type, data: base64Data } }] }] })
                         });
                         const data = await response.json();
+                        
+                        clearInterval(interval);
+                        setProgress(100);
+
                         if (data.error) {
                             if (data.error.code === 400 && (data.error.message.includes("API key not valid") || data.error.message.includes("API key"))) {
                                 setLoading(false);
@@ -953,23 +1002,33 @@
                              } catch(e) { console.log("Rate fetch failed in AI", e); rate = 0.22; }
                         }
 
-                        if (result.items && result.items.length > 0) {
-                            const storeName = result.store ? ` (@${result.store})` : '';
-                            const mappedItems = result.items.map(i => ({
-                                ...i, name: i.name + storeName, category: categories.includes(i.category) ? i.category : '購物'
-                            }));
-                            setScannedItems(mappedItems);
-                            setSelectedIndices(new Set(result.items.map((_, i) => i)));
-                            if (result.currency) setScanSettings(prev => ({ ...prev, currency: result.currency, exchangeRate: rate }));
-                        } else {
-                            showAlert("未偵測到細項，將轉為單筆輸入模式。");
-                            if (result.amount || result.total) {
+                        // Delay processing slightly to show 100% completion
+                        setTimeout(() => {
+                            if (result.items && result.items.length > 0) {
                                 const storeName = result.store ? ` (@${result.store})` : '';
-                                setForm(prev => ({ ...prev, foreignAmount: result.amount || result.total, item: (result.store || '消費') + storeName, currency: result.currency || prev.currency, exchangeRate: rate }));
+                                const mappedItems = result.items.map(i => ({
+                                    ...i, name: i.name + storeName, category: categories.includes(i.category) ? i.category : '購物'
+                                }));
+                                setScannedItems(mappedItems);
+                                setSelectedIndices(new Set(result.items.map((_, i) => i)));
+                                if (result.currency) setScanSettings(prev => ({ ...prev, currency: result.currency, exchangeRate: rate }));
+                            } else {
+                                showAlert("未偵測到細項，將轉為單筆輸入模式。");
+                                if (result.amount || result.total) {
+                                    const storeName = result.store ? ` (@${result.store})` : '';
+                                    setForm(prev => ({ ...prev, foreignAmount: result.amount || result.total, item: (result.store || '消費') + storeName, currency: result.currency || prev.currency, exchangeRate: rate }));
+                                }
                             }
-                        }
+                            setLoading(false);
+                        }, 500);
+
                     };
-                } catch (error) { console.error(error); showAlert("辨識失敗: " + error.message, "錯誤"); } finally { setLoading(false); e.target.value = ''; }
+                } catch (error) { 
+                    clearInterval(interval);
+                    setLoading(false);
+                    console.error(error); 
+                    showAlert("辨識失敗: " + error.message, "錯誤"); 
+                } finally { e.target.value = ''; }
             };
 
             const updateScannedItem = (index, field, value) => {
@@ -1011,12 +1070,15 @@
 
             return (
                 <div className="card-soft p-5 pb-8 mb-4">
+                    {/* NEW: Processing Modal with Progress Bar */}
+                    {loading && <ProcessingModal progress={progress} />}
+                    
                     {showRescueModal && <ApiKeyRescueModal onSave={handleRescueKey} onCancel={() => setShowRescueModal(false)} />}
                     <h2 className="text-lg font-bold text-stone-700 mb-5 flex justify-between items-center">
                         <span className="flex items-center"><i className={`fa-solid ${initialData ? 'fa-pen-to-square' : 'fa-plus-circle'} text-sage-400 mr-2`}></i>{initialData ? '修改花費' : '新增花費'}</span>
-                        <button type="button" onClick={() => fileRef.current.click()} disabled={loading} className="text-sm bg-sage-50 text-sage-600 px-3 py-1.5 rounded-lg flex items-center gap-2 hover:bg-sage-100 transition-colors font-medium border border-sage-100">
-                            {loading ? <div className="loader"></div> : <i className="fa-solid fa-camera"></i>}
-                            <span>{loading ? '讀取中' : '拍收據'}</span>
+                        <button type="button" onClick={() => fileRef.current.click()} className="text-sm bg-sage-50 text-sage-600 px-3 py-1.5 rounded-lg flex items-center gap-2 hover:bg-sage-100 transition-colors font-medium border border-sage-100">
+                            <i className="fa-solid fa-camera"></i>
+                            <span>拍收據</span>
                         </button>
                         <input type="file" ref={fileRef} accept="image/*" className="hidden" onChange={handleImageUpload} />
                     </h2>
@@ -1036,7 +1098,7 @@
                                 <button 
                                     type="button" 
                                     onClick={toggleSelectAll} 
-                                    className={`text-xs px-3 py-1.5 rounded-full font-bold transition-all shadow-sm ${isAllSelected ? 'bg-red-50 text-red-500 border border-red-100' : 'bg-sage-50 text-sage-600 border border-sage-100'}`}
+                                    className={`text-xs px-3 py-1.5 rounded-full font-bold transition-all shadow-sm ${isAllSelected ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-sage-100 text-sage-700 border border-sage-200'}`}
                                 >
                                     {isAllSelected ? '取消全選' : '全選'}
                                 </button>
@@ -1050,6 +1112,7 @@
                                                 <input type="checkbox" className="custom-checkbox flex-shrink-0" checked={selectedIndices.has(idx)} onChange={() => { const newSet = new Set(selectedIndices); if (newSet.has(idx)) newSet.delete(idx); else newSet.add(idx); setSelectedIndices(newSet); }} />
                                             </div>
                                             <div className="flex-1 min-w-0 flex flex-col gap-2">
+                                                {/* Full width item name input */}
                                                 <input value={item.name} onChange={(e) => updateScannedItem(idx, 'name', e.target.value)} className="border-b border-dashed border-stone-300 w-full text-sm bg-transparent font-medium focus:border-sage-400 focus:outline-none py-1 text-stone-700" placeholder="品名" />
                                                 <div className="flex items-center justify-between gap-2">
                                                     <select value={item.category} onChange={(e) => updateScannedItem(idx, 'category', e.target.value)} className="text-xs text-stone-500 bg-transparent border-none p-0 focus:ring-0 w-24">{categories.map(c => <option key={c} value={c}>{c}</option>)}</select>
