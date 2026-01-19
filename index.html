@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>基礎記帳 V26 (UI優化版)</title>
+    <title>基礎記帳 V30 (排序功能版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -178,6 +178,13 @@
             0% { background-position: 1rem 0; }
             100% { background-position: 0 0; }
         }
+
+        /* Drag and Drop styling */
+        .dragging {
+            opacity: 0.5;
+            background-color: #f5f5f4;
+            border: 2px dashed #769679;
+        }
     </style>
 </head>
 <body>
@@ -338,6 +345,11 @@
                 }
             };
 
+            const handleReorderCategories = (newCategories) => {
+                setCategories(newCategories);
+                localStorage.setItem(`categories_${tripId}`, JSON.stringify(newCategories));
+            };
+
             const handleEditCategory = async (oldName, newName) => {
                 if (!newName || newName === oldName) return;
                 const newCats = categories.map(c => c === oldName ? newName : c);
@@ -476,52 +488,56 @@
                             <LoginView onLogin={handleLogin} defaultKey={apiKey} history={loginHistory} />
                         ) : (
                             <>
-                                {/* Combined Header & Filter Block */}
-                                <div>
-                                    <Header 
-                                        tripId={tripId} 
-                                        expenses={filteredExpenses} 
-                                        filterCategory={filterCategory}
-                                        onLogout={() => window.location.reload()} 
-                                        onAnalysis={() => setShowAnalysis(true)} 
-                                        onStats={() => setShowStats(true)}
-                                    />
-                                    
-                                    {/* Integrated Search & Filter Bar */}
-                                    <div className="bg-white/95 backdrop-blur-sm border-b border-stone-100 shadow-sm px-3 py-3 flex flex-col gap-3">
+                                {/* Combined Header & Filter Block - HIDDEN IN ADD VIEW */}
+                                {view === 'list' && (
+                                    <div>
+                                        <Header 
+                                            tripId={tripId} 
+                                            expenses={filteredExpenses} 
+                                            filterCategory={filterCategory}
+                                            onLogout={() => window.location.reload()} 
+                                            onAnalysis={() => setShowAnalysis(true)} 
+                                            onStats={() => setShowStats(true)}
+                                        />
                                         
-                                        {/* Search Input */}
-                                        <div className="relative w-full">
-                                            <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-stone-400"></i>
-                                            <input 
-                                                type="text" 
-                                                value={searchTerm}
-                                                onChange={(e) => setSearchTerm(e.target.value)}
-                                                placeholder="搜尋品名或金額..." 
-                                                className="w-full bg-stone-50 border border-stone-200 text-stone-700 text-sm rounded-lg pl-10 pr-10 py-2.5 outline-none focus:bg-white focus:border-sage-400 transition-all placeholder-stone-400"
-                                            />
-                                            {searchTerm && (
-                                                <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-stone-400 hover:text-stone-600">
-                                                    <i className="fa-solid fa-circle-xmark"></i>
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        <div className="flex items-center">
-                                            <div className="flex-1 overflow-x-auto no-scrollbar flex items-center gap-2 px-1">
-                                                <button onClick={() => setFilterCategory('All')} className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-all flex-shrink-0 ${filterCategory === 'All' ? 'bg-sage-400 text-white shadow-sm' : 'bg-stone-50 text-stone-500 hover:bg-stone-100'}`}>全部</button>
-                                                {categories.map(c => (
-                                                    <button key={c} onClick={() => setFilterCategory(c)} className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-all flex-shrink-0 ${filterCategory === c ? 'bg-sage-400 text-white shadow-sm' : 'bg-stone-50 text-stone-500 hover:bg-stone-100'}`}>{c}</button>
-                                                ))}
+                                        {/* Integrated Search & Filter Bar */}
+                                        <div className="bg-white/95 backdrop-blur-sm border-b border-stone-100 shadow-sm px-3 py-3 flex flex-col gap-3">
+                                            
+                                            {/* Search Input */}
+                                            <div className="relative w-full">
+                                                <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-stone-400"></i>
+                                                <input 
+                                                    type="text" 
+                                                    value={searchTerm}
+                                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                                    placeholder="搜尋品名或金額..." 
+                                                    className="w-full bg-stone-50 border border-stone-200 text-stone-700 text-sm rounded-lg pl-10 pr-10 py-2.5 outline-none focus:bg-white focus:border-sage-400 transition-all placeholder-stone-400"
+                                                />
+                                                {searchTerm && (
+                                                    <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-stone-400 hover:text-stone-600">
+                                                        <i className="fa-solid fa-circle-xmark"></i>
+                                                    </button>
+                                                )}
                                             </div>
-                                            <div className="pl-2 border-l border-stone-200 ml-2">
-                                                <button onClick={() => setShowCatManager(true)} className="w-9 h-9 rounded-full bg-stone-50 text-stone-400 flex items-center justify-center hover:bg-sage-50 hover:text-sage-600 transition-colors" title="管理分類">
-                                                    <i className="fa-solid fa-gear"></i>
-                                                </button>
+
+                                            <div className="flex items-center">
+                                                <div className="flex-1 overflow-x-auto no-scrollbar flex items-center gap-2 px-1">
+                                                    {/* Original Sage Green for 'All' button */}
+                                                    <button onClick={() => setFilterCategory('All')} className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-all flex-shrink-0 ${filterCategory === 'All' ? 'bg-sage-400 text-white shadow-sm' : 'bg-stone-50 text-stone-500 hover:bg-stone-100'}`}>全部</button>
+                                                    {categories.map(c => (
+                                                        // Original Sage Green for active category buttons
+                                                        <button key={c} onClick={() => setFilterCategory(c)} className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-all flex-shrink-0 ${filterCategory === c ? 'bg-sage-400 text-white shadow-sm' : 'bg-stone-50 text-stone-500 hover:bg-stone-100'}`}>{c}</button>
+                                                    ))}
+                                                </div>
+                                                <div className="pl-2 border-l border-stone-200 ml-2">
+                                                    <button onClick={() => setShowCatManager(true)} className="w-9 h-9 rounded-full bg-stone-50 text-stone-400 flex items-center justify-center hover:bg-sage-50 hover:text-sage-600 transition-colors" title="管理分類">
+                                                        <i className="fa-solid fa-gear"></i>
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                                )}
 
                                 <div className="p-4 pt-4 pb-28">
                                     {view === 'list' && <ExpenseList expenses={filteredExpenses} onEdit={(item) => { setEditItem(item); setView('add'); }} onDelete={handleDelete} />}
@@ -531,7 +547,7 @@
                                 {/* Modals */}
                                 {showAnalysis && <AnalysisModal expenses={expenses} apiKey={apiKey} onClose={() => setShowAnalysis(false)} />}
                                 {showStats && <StatsModal expenses={expenses} onClose={() => setShowStats(false)} />}
-                                {showCatManager && <CategoryManagerModal categories={categories} onAdd={handleAddCategory} onEdit={handleEditCategory} onDelete={handleDeleteCategory} onClose={() => setShowCatManager(false)} />}
+                                {showCatManager && <CategoryManagerModal categories={categories} onAdd={handleAddCategory} onReorder={handleReorderCategories} onEdit={handleEditCategory} onDelete={handleDeleteCategory} onClose={() => setShowCatManager(false)} />}
                             </>
                         )}
                     </div>
@@ -557,7 +573,8 @@
             const [key, setKey] = React.useState(defaultKey || '');
             React.useEffect(() => { if (history && history.length > 0) setCode(history[0]); }, [history]);
             return (
-                <div className="min-h-screen flex flex-col items-center justify-center p-6">
+                // Added flex-grow and w-full to ensure it fills the parent mobile-container for perfect centering
+                <div className="flex-grow flex flex-col items-center justify-center p-6 w-full">
                     <div className="bg-white/80 backdrop-blur-md p-8 rounded-2xl shadow-sm border border-stone-100 w-full max-w-sm text-center">
                         <div className="text-5xl text-sage-400 mb-4"><i className="fa-solid fa-wallet"></i></div>
                         <h1 className="text-2xl font-bold text-stone-700 mb-1 tracking-wide">旅行記帳</h1>
@@ -684,14 +701,47 @@
             );
         };
 
-        const CategoryManagerModal = ({ categories, onAdd, onEdit, onDelete, onClose }) => {
+        const CategoryManagerModal = ({ categories, onAdd, onEdit, onDelete, onReorder, onClose }) => {
             const [newCatName, setNewCatName] = React.useState('');
             const [editingIndex, setEditingIndex] = React.useState(-1);
             const [editValue, setEditValue] = React.useState('');
+            const [draggedItem, setDraggedItem] = React.useState(null);
 
             const handleAdd = () => { if (newCatName.trim()) { onAdd(newCatName.trim()); setNewCatName(''); } };
             const startEdit = (index, val) => { setEditingIndex(index); setEditValue(val); };
             const saveEdit = (oldName) => { if (editValue.trim() && editValue !== oldName) { onEdit(oldName, editValue.trim()); } setEditingIndex(-1); };
+
+            const handleDragStart = (e, index) => {
+                setDraggedItem(categories[index]);
+                e.dataTransfer.effectAllowed = "move";
+                // Add a small delay to allow the ghost image to be generated before styling the original element
+                setTimeout(() => {
+                    if(e.target) e.target.classList.add('dragging');
+                }, 0);
+            };
+
+            const handleDragEnd = (e) => {
+                if(e.target) e.target.classList.remove('dragging');
+                setDraggedItem(null);
+            };
+
+            const handleDragOver = (e, index) => {
+                e.preventDefault();
+                const draggedOverItem = categories[index];
+
+                // If the item is dragged over itself, ignore
+                if (draggedItem === draggedOverItem) {
+                    return;
+                }
+
+                // Filter out the currently dragged item
+                let items = categories.filter(item => item !== draggedItem);
+
+                // Add the dragged item after the hovered item
+                items.splice(index, 0, draggedItem);
+
+                onReorder(items);
+            };
 
             return (
                 <div className="fixed inset-0 bg-stone-800/40 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 fade-in">
@@ -702,7 +752,17 @@
                         </div>
                         <div className="p-4 overflow-y-auto flex-1 space-y-2">
                             {categories.map((cat, idx) => (
-                                <div key={idx} className="flex justify-between items-center p-3 border border-stone-100 rounded-xl bg-stone-50 hover:bg-white hover:shadow-sm transition-all">
+                                <div 
+                                    key={idx} 
+                                    draggable={editingIndex === -1}
+                                    onDragStart={(e) => handleDragStart(e, idx)}
+                                    onDragOver={(e) => handleDragOver(e, idx)}
+                                    onDragEnd={handleDragEnd}
+                                    className="flex justify-between items-center p-3 border border-stone-100 rounded-xl bg-stone-50 hover:bg-white hover:shadow-sm transition-all cursor-move"
+                                >
+                                    <div className="mr-3 text-stone-300 cursor-grab active:cursor-grabbing">
+                                        <i className="fa-solid fa-bars"></i>
+                                    </div>
                                     {editingIndex === idx ? (
                                         <div className="flex-1 flex gap-2 mr-2">
                                             <input value={editValue} onChange={e => setEditValue(e.target.value)} className="border rounded-lg px-2 py-1 w-full text-sm outline-none focus:border-sage-400" autoFocus />
@@ -834,7 +894,8 @@
                         <div key={item.id} onClick={() => onEdit(item)} className="card-soft flex justify-between items-center active:scale-[0.98] transition-transform p-4 cursor-pointer">
                             <div className="flex-1 min-w-0 pr-3">
                                 <div className="mb-2">
-                                    <span className="bg-stone-100 text-stone-600 px-2 py-0.5 rounded-md text-[10px] font-bold inline-block mb-1 tracking-wide uppercase">{item.category}</span>
+                                    {/* Changed to Sage Green */}
+                                    <span className="bg-sage-50 text-sage-600 px-2 py-0.5 rounded-md text-[10px] font-bold inline-block mb-1 tracking-wide uppercase">{item.category}</span>
                                     <div className="font-bold text-stone-700 text-base leading-snug break-words">{item.item || "未命名"}</div>
                                 </div>
                                 <div className="flex flex-col">
@@ -1143,6 +1204,7 @@
                                 <label className="input-label ml-1">分類</label>
                                 <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 items-center">
                                     {categories.map(c => (
+                                        // Changed to Sage Green
                                         <button type="button" key={c} onClick={() => setForm({...form, category: c})} className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap border transition-all ${form.category === c ? 'bg-sage-400 text-white border-sage-400 shadow-sm transform scale-105' : 'bg-white text-stone-500 border-stone-200 hover:bg-stone-50'}`}>{c}</button>
                                     ))}
                                     {isAddingCat ? (
