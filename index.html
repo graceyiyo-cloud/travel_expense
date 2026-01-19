@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>基礎記帳 V30 (排序功能版)</title>
+    <title>基礎記帳 V31 (手機拖曳修復版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -179,11 +180,14 @@
             100% { background-position: 0 0; }
         }
 
-        /* Drag and Drop styling */
-        .dragging {
-            opacity: 0.5;
+        /* Sortable ghost class */
+        .sortable-ghost {
+            opacity: 0.4;
             background-color: #f5f5f4;
             border: 2px dashed #769679;
+        }
+        .sortable-drag {
+            cursor: grabbing;
         }
     </style>
 </head>
@@ -705,43 +709,38 @@
             const [newCatName, setNewCatName] = React.useState('');
             const [editingIndex, setEditingIndex] = React.useState(-1);
             const [editValue, setEditValue] = React.useState('');
-            const [draggedItem, setDraggedItem] = React.useState(null);
+            
+            const listRef = React.useRef(null);
+
+            // Initialize SortableJS
+            React.useEffect(() => {
+                if (!listRef.current) return;
+                
+                const sortable = new Sortable(listRef.current, {
+                    animation: 150,
+                    handle: '.drag-handle', // Only allow dragging from the handle
+                    ghostClass: 'sortable-ghost',
+                    dragClass: 'sortable-drag',
+                    delay: 100, // Small delay to prevent accidental drags on scroll
+                    delayOnTouchOnly: true,
+                    onEnd: (evt) => {
+                        // Create a copy of current categories
+                        const newItems = [...categories];
+                        // Remove item from old index
+                        const [movedItem] = newItems.splice(evt.oldIndex, 1);
+                        // Insert item at new index
+                        newItems.splice(evt.newIndex, 0, movedItem);
+                        // Call the reorder handler
+                        onReorder(newItems);
+                    }
+                });
+
+                return () => sortable.destroy();
+            }, [categories, onReorder]);
 
             const handleAdd = () => { if (newCatName.trim()) { onAdd(newCatName.trim()); setNewCatName(''); } };
             const startEdit = (index, val) => { setEditingIndex(index); setEditValue(val); };
             const saveEdit = (oldName) => { if (editValue.trim() && editValue !== oldName) { onEdit(oldName, editValue.trim()); } setEditingIndex(-1); };
-
-            const handleDragStart = (e, index) => {
-                setDraggedItem(categories[index]);
-                e.dataTransfer.effectAllowed = "move";
-                // Add a small delay to allow the ghost image to be generated before styling the original element
-                setTimeout(() => {
-                    if(e.target) e.target.classList.add('dragging');
-                }, 0);
-            };
-
-            const handleDragEnd = (e) => {
-                if(e.target) e.target.classList.remove('dragging');
-                setDraggedItem(null);
-            };
-
-            const handleDragOver = (e, index) => {
-                e.preventDefault();
-                const draggedOverItem = categories[index];
-
-                // If the item is dragged over itself, ignore
-                if (draggedItem === draggedOverItem) {
-                    return;
-                }
-
-                // Filter out the currently dragged item
-                let items = categories.filter(item => item !== draggedItem);
-
-                // Add the dragged item after the hovered item
-                items.splice(index, 0, draggedItem);
-
-                onReorder(items);
-            };
 
             return (
                 <div className="fixed inset-0 bg-stone-800/40 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 fade-in">
@@ -750,17 +749,13 @@
                             <h3 className="font-bold text-stone-700 text-lg">分類管理</h3>
                             <button onClick={onClose}><i className="fa-solid fa-xmark text-xl text-stone-400 hover:text-stone-600"></i></button>
                         </div>
-                        <div className="p-4 overflow-y-auto flex-1 space-y-2">
+                        <div className="p-4 overflow-y-auto flex-1 space-y-2" ref={listRef}>
                             {categories.map((cat, idx) => (
                                 <div 
-                                    key={idx} 
-                                    draggable={editingIndex === -1}
-                                    onDragStart={(e) => handleDragStart(e, idx)}
-                                    onDragOver={(e) => handleDragOver(e, idx)}
-                                    onDragEnd={handleDragEnd}
-                                    className="flex justify-between items-center p-3 border border-stone-100 rounded-xl bg-stone-50 hover:bg-white hover:shadow-sm transition-all cursor-move"
+                                    key={cat} // Use category name as key for Sortable to track efficiently
+                                    className="flex justify-between items-center p-3 border border-stone-100 rounded-xl bg-stone-50 hover:bg-white hover:shadow-sm transition-all"
                                 >
-                                    <div className="mr-3 text-stone-300 cursor-grab active:cursor-grabbing">
+                                    <div className="drag-handle mr-3 text-stone-300 cursor-grab active:cursor-grabbing p-1">
                                         <i className="fa-solid fa-bars"></i>
                                     </div>
                                     {editingIndex === idx ? (
