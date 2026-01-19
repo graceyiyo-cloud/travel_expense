@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>基礎記帳 V20 (視窗定位修復)</title>
+    <title>基礎記帳 V21 (搜尋功能/版面優化)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -188,6 +188,7 @@
             const [editItem, setEditItem] = React.useState(null);
             const [loginHistory, setLoginHistory] = React.useState([]);
             const [filterCategory, setFilterCategory] = React.useState('All');
+            const [searchTerm, setSearchTerm] = React.useState(''); // New Search State
             
             // Custom Dialog States
             const [dialog, setDialog] = React.useState({ show: false, type: 'alert', title: '', msg: '', onConfirm: null });
@@ -367,20 +368,49 @@
                 }, "刪除資料");
             };
 
+            // Enhanced Filter Logic with Search
             const filteredExpenses = React.useMemo(() => {
-                if (filterCategory === 'All') return expenses;
-                return expenses.filter(e => e.category === filterCategory);
-            }, [expenses, filterCategory]);
+                let result = expenses;
+                // Category Filter
+                if (filterCategory !== 'All') {
+                    result = result.filter(e => e.category === filterCategory);
+                }
+                // Search Filter
+                if (searchTerm.trim()) {
+                    const lowerTerm = searchTerm.toLowerCase().trim();
+                    result = result.filter(e => 
+                        (e.item || '').toLowerCase().includes(lowerTerm) || 
+                        String(e.twdAmount || '').includes(lowerTerm) ||
+                        String(e.foreignAmount || '').includes(lowerTerm)
+                    );
+                }
+                return result;
+            }, [expenses, filterCategory, searchTerm]);
 
             return (
                 <>
                     <div className="mobile-container">
+                        {dialog.show && (
+                            <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[3000] flex items-center justify-center p-4 fade-in">
+                                <div className="bg-white rounded-2xl shadow-xl w-full max-w-xs transform transition-all scale-100 p-6 text-center border border-white/50">
+                                    <h3 className={`font-bold text-lg mb-2 ${dialog.type === 'confirm' ? 'text-red-500' : 'text-teal-700'}`}>{dialog.title}</h3>
+                                    <p className="text-gray-600 mb-6 text-sm whitespace-pre-line">{dialog.msg}</p>
+                                    <div className="flex gap-3 justify-center">
+                                        {dialog.type === 'confirm' && (
+                                            <button onClick={() => setDialog(prev => ({...prev, show: false}))} className="px-4 py-2.5 rounded-xl bg-gray-100 text-gray-600 font-medium text-sm flex-1 hover:bg-gray-200 transition-colors">取消</button>
+                                        )}
+                                        <button onClick={dialog.onConfirm} className={`px-4 py-2.5 rounded-xl text-white font-medium text-sm flex-1 transition-colors shadow-lg shadow-teal-100 ${dialog.type === 'confirm' ? 'bg-red-500 hover:bg-red-600' : 'bg-gradient-to-r from-teal-400 to-teal-500 hover:from-teal-500 hover:to-teal-600'}`}>確定</button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {view === 'login' ? (
                             <LoginView onLogin={handleLogin} defaultKey={apiKey} history={loginHistory} />
                         ) : (
                             <>
-                                {/* Combined Sticky Header Block */}
-                                <div className="sticky top-0 z-20">
+                                {/* Combined Header & Filter Block - Not Sticky as requested */}
+                                <div>
                                     <Header 
                                         tripId={tripId} 
                                         expenses={filteredExpenses} 
@@ -390,18 +420,38 @@
                                         onStats={() => setShowStats(true)}
                                     />
                                     
-                                    {/* Integrated Filter Bar */}
-                                    <div className="bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm px-2 py-2 flex items-center">
-                                        <div className="flex-1 overflow-x-auto no-scrollbar flex items-center gap-2 px-1">
-                                            <button onClick={() => setFilterCategory('All')} className={`px-3 py-1.5 rounded-xl text-sm whitespace-nowrap transition-all flex-shrink-0 ${filterCategory === 'All' ? 'bg-teal-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>全部</button>
-                                            {categories.map(c => (
-                                                <button key={c} onClick={() => setFilterCategory(c)} className={`px-3 py-1.5 rounded-xl text-sm whitespace-nowrap transition-all flex-shrink-0 ${filterCategory === c ? 'bg-teal-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{c}</button>
-                                            ))}
+                                    {/* Integrated Search & Filter Bar */}
+                                    <div className="bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm px-3 py-3 flex flex-col gap-3">
+                                        
+                                        {/* Search Input */}
+                                        <div className="relative w-full">
+                                            <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                            <input 
+                                                type="text" 
+                                                value={searchTerm}
+                                                onChange={(e) => setSearchTerm(e.target.value)}
+                                                placeholder="搜尋品名或金額..." 
+                                                className="w-full bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-xl pl-10 pr-10 py-2.5 outline-none focus:bg-white focus:border-teal-400 transition-all placeholder-gray-400"
+                                            />
+                                            {searchTerm && (
+                                                <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                                    <i className="fa-solid fa-circle-xmark"></i>
+                                                </button>
+                                            )}
                                         </div>
-                                        <div className="pl-2 border-l border-gray-200 ml-1">
-                                            <button onClick={() => setShowCatManager(true)} className="w-8 h-8 rounded-full text-gray-400 flex items-center justify-center hover:bg-gray-100 hover:text-teal-600 transition-colors" title="管理分類">
-                                                <i className="fa-solid fa-gear"></i>
-                                            </button>
+
+                                        <div className="flex items-center">
+                                            <div className="flex-1 overflow-x-auto no-scrollbar flex items-center gap-2 px-1">
+                                                <button onClick={() => setFilterCategory('All')} className={`px-3 py-1.5 rounded-xl text-sm whitespace-nowrap transition-all flex-shrink-0 ${filterCategory === 'All' ? 'bg-teal-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>全部</button>
+                                                {categories.map(c => (
+                                                    <button key={c} onClick={() => setFilterCategory(c)} className={`px-3 py-1.5 rounded-xl text-sm whitespace-nowrap transition-all flex-shrink-0 ${filterCategory === c ? 'bg-teal-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{c}</button>
+                                                ))}
+                                            </div>
+                                            <div className="pl-2 border-l border-gray-200 ml-2">
+                                                <button onClick={() => setShowCatManager(true)} className="w-9 h-9 rounded-full bg-gray-50 text-gray-400 flex items-center justify-center hover:bg-teal-50 hover:text-teal-600 transition-colors" title="管理分類">
+                                                    <i className="fa-solid fa-gear"></i>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -410,35 +460,14 @@
                                     {view === 'list' && <ExpenseList expenses={filteredExpenses} onEdit={(item) => { setEditItem(item); setView('add'); }} onDelete={handleDelete} />}
                                     {view === 'add' && <AddForm apiKey={apiKey} onUpdateKey={handleUpdateKey} categories={categories} onAddCategory={handleAddCategory} initialData={editItem} onSave={handleSave} onBatchSave={handleBatchSave} onCancel={() => { setView('list'); setEditItem(null); }} showAlert={showAlert} />}
                                 </div>
+
+                                {/* Modals - Glass Style */}
+                                {showAnalysis && <AnalysisModal expenses={expenses} apiKey={apiKey} onClose={() => setShowAnalysis(false)} />}
+                                {showStats && <StatsModal expenses={expenses} onClose={() => setShowStats(false)} />}
+                                {showCatManager && <CategoryManagerModal categories={categories} onAdd={handleAddCategory} onEdit={handleEditCategory} onDelete={handleDeleteCategory} onClose={() => setShowCatManager(false)} />}
                             </>
                         )}
                     </div>
-
-                    {/* MODALS & DIALOGS MOVED OUTSIDE MOBILE CONTAINER FOR CORRECT POSITIONING */}
-                    
-                    {/* Custom Dialog - Soft Style */}
-                    {dialog.show && (
-                        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[3000] flex items-center justify-center p-4 fade-in">
-                            <div className="bg-white rounded-2xl shadow-xl w-full max-w-xs transform transition-all scale-100 p-6 text-center border border-white/50">
-                                <h3 className={`font-bold text-lg mb-2 ${dialog.type === 'confirm' ? 'text-red-500' : 'text-teal-700'}`}>{dialog.title}</h3>
-                                <p className="text-gray-600 mb-6 text-sm whitespace-pre-line">{dialog.msg}</p>
-                                <div className="flex gap-3 justify-center">
-                                    {dialog.type === 'confirm' && (
-                                        <button onClick={() => setDialog(prev => ({...prev, show: false}))} className="px-4 py-2.5 rounded-xl bg-gray-100 text-gray-600 font-medium text-sm flex-1 hover:bg-gray-200 transition-colors">取消</button>
-                                    )}
-                                    <button onClick={dialog.onConfirm} className={`px-4 py-2.5 rounded-xl text-white font-medium text-sm flex-1 transition-colors shadow-lg shadow-teal-100 ${dialog.type === 'confirm' ? 'bg-red-500 hover:bg-red-600' : 'bg-gradient-to-r from-teal-400 to-teal-500 hover:from-teal-500 hover:to-teal-600'}`}>確定</button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {view !== 'login' && (
-                        <>
-                            {showAnalysis && <AnalysisModal expenses={expenses} apiKey={apiKey} onClose={() => setShowAnalysis(false)} />}
-                            {showStats && <StatsModal expenses={expenses} onClose={() => setShowStats(false)} />}
-                            {showCatManager && <CategoryManagerModal categories={categories} onAdd={handleAddCategory} onEdit={handleEditCategory} onDelete={handleDeleteCategory} onClose={() => setShowCatManager(false)} />}
-                        </>
-                    )}
 
                     {/* Floating Add Button */}
                     {view === 'list' && (
@@ -508,7 +537,7 @@
             }, [expenses]);
 
             return (
-                <div className="header-glass text-white p-5 pb-4 min-h-[90px] flex flex-col justify-between">
+                <div className="header-glass text-white p-5 pb-4 min-h-[90px] flex flex-col justify-between rounded-b-[2rem] mx-[-1px] mb-[-20px] pb-8 z-0">
                     <div className="flex justify-between items-start mb-2">
                         <div>
                             <span className="text-teal-50 text-xs uppercase tracking-wider block font-medium opacity-80">Project</span>
