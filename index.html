@@ -2,8 +2,8 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>基礎記帳 V15 (柔和微光版)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>基礎記帳 V18 (懸浮按鈕修復)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -21,7 +21,6 @@
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
             background-color: #f0fdfa;
-            /* Creating a soft, fresh pastel gradient */
             background-image: 
                 radial-gradient(at 0% 0%, hsla(168,76%,85%,1) 0px, transparent 50%),
                 radial-gradient(at 100% 0%, hsla(200,80%,90%,1) 0px, transparent 50%),
@@ -30,30 +29,31 @@
             background-attachment: fixed;
             background-size: cover;
             color: #334155;
+            -webkit-tap-highlight-color: transparent;
         } 
         
+        /* Container styling - Note: backdrop-filter moves fixed children, so FAB must be outside */
         .mobile-container { 
             max-width: 600px; 
             margin: 0 auto; 
             min-height: 100vh; 
-            /* Glassmorphism Effect */
             background-color: rgba(255, 255, 255, 0.65); 
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             position: relative; 
-            padding-bottom: 140px; 
             box-shadow: 0 0 40px rgba(20, 184, 166, 0.1);
+            display: flex;
+            flex-direction: column;
+            padding-bottom: 100px;
         }
         
         .input-label { display: block; font-size: 0.85rem; color: #64748b; margin-bottom: 4px; font-weight: 500; }
         
-        /* Softer Inputs */
         .input-field { width: 100%; padding: 12px; border: 1px solid rgba(226, 232, 240, 0.8); border-radius: 12px; font-size: 1rem; transition: all 0.2s; -webkit-appearance: none; background: rgba(255, 255, 255, 0.9); }
         .input-field:focus { border-color: #14b8a6; outline: none; ring: 3px solid rgba(20, 184, 166, 0.15); background: white; } 
         
         .input-sm { padding: 8px; font-size: 0.9rem; }
         
-        /* Buttons with subtle gradients */
         .btn-primary { 
             background: linear-gradient(135deg, #2dd4bf 0%, #0d9488 100%); 
             color: white; padding: 12px; border-radius: 12px; width: 100%; font-weight: 600; text-align: center; 
@@ -65,7 +65,6 @@
         .btn-secondary { background: white; color: #475569; padding: 12px; border-radius: 12px; width: 100%; font-weight: 600; text-align: center; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
         .btn-danger { background: linear-gradient(135deg, #f87171 0%, #dc2626 100%); color: white; padding: 12px; border-radius: 12px; width: 100%; font-weight: 600; text-align: center; }
         
-        /* Card Styling for better visibility on glass */
         .card-soft {
             background: rgba(255, 255, 255, 0.95);
             border-radius: 16px;
@@ -84,12 +83,46 @@
         .stat-bar-bg { background-color: #f1f5f9; border-radius: 9999px; height: 8px; width: 100%; overflow: hidden; }
         .stat-bar-fill { height: 100%; border-radius: 9999px; background-color: #14b8a6; transition: width 0.5s ease-in-out; }
         
-        /* Header Glass */
         .header-glass {
-            background: rgba(20, 184, 166, 0.9);
+            background: rgba(20, 184, 166, 0.95);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
         }
+        
+        /* Floating Button Container */
+        .fab-container {
+            position: fixed;
+            bottom: 2rem;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            pointer-events: none; /* Allow clicks to pass through empty space */
+            display: flex;
+            justify-content: center;
+        }
+        .fab-wrapper {
+            width: 100%;
+            max-width: 600px;
+            padding: 0 1.5rem;
+            display: flex;
+            justify-content: flex-end;
+        }
+        .fab-btn {
+            pointer-events: auto; /* Enable clicks on the button */
+            width: 3.5rem;
+            height: 3.5rem;
+            border-radius: 9999px;
+            background: linear-gradient(135deg, #2dd4bf 0%, #0d9488 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 10px 15px -3px rgba(20, 184, 166, 0.3), 0 4px 6px -2px rgba(20, 184, 166, 0.1);
+            border: 2px solid white;
+            transition: all 0.2s;
+        }
+        .fab-btn:active { transform: scale(0.95); }
     </style>
 </head>
 <body>
@@ -184,7 +217,6 @@
                               .collection('public').doc('data')
                               .collection(`${tripId}_simple_v1`);
                               
-                // 排序 asc (由舊到新)
                 const unsub = ref.orderBy('createdAt', 'asc').onSnapshot(snap => {
                     const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                     setExpenses(data);
@@ -192,7 +224,6 @@
                 return () => unsub();
             }, [user, tripId]);
 
-            // Helper to show custom dialogs
             const showAlert = (msg, title = "提示") => {
                 setDialog({ show: true, type: 'alert', title, msg, onConfirm: () => setDialog(prev => ({...prev, show: false})) });
             };
@@ -342,69 +373,78 @@
             }, [expenses, filterCategory]);
 
             return (
-                <div className="mobile-container">
-                    {/* Custom Dialog - Soft Style */}
-                    {dialog.show && (
-                        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[999] flex items-center justify-center p-4 fade-in">
-                            <div className="bg-white rounded-2xl shadow-xl w-full max-w-xs transform transition-all scale-100 p-6 text-center border border-white/50">
-                                <h3 className={`font-bold text-lg mb-2 ${dialog.type === 'confirm' ? 'text-red-500' : 'text-teal-700'}`}>{dialog.title}</h3>
-                                <p className="text-gray-600 mb-6 text-sm whitespace-pre-line">{dialog.msg}</p>
-                                <div className="flex gap-3 justify-center">
-                                    {dialog.type === 'confirm' && (
-                                        <button onClick={() => setDialog(prev => ({...prev, show: false}))} className="px-4 py-2.5 rounded-xl bg-gray-100 text-gray-600 font-medium text-sm flex-1 hover:bg-gray-200 transition-colors">取消</button>
-                                    )}
-                                    <button onClick={dialog.onConfirm} className={`px-4 py-2.5 rounded-xl text-white font-medium text-sm flex-1 transition-colors shadow-lg shadow-teal-100 ${dialog.type === 'confirm' ? 'bg-red-500 hover:bg-red-600' : 'bg-gradient-to-r from-teal-400 to-teal-500 hover:from-teal-500 hover:to-teal-600'}`}>確定</button>
+                <>
+                    <div className="mobile-container">
+                        {dialog.show && (
+                            <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[999] flex items-center justify-center p-4 fade-in">
+                                <div className="bg-white rounded-2xl shadow-xl w-full max-w-xs transform transition-all scale-100 p-6 text-center border border-white/50">
+                                    <h3 className={`font-bold text-lg mb-2 ${dialog.type === 'confirm' ? 'text-red-500' : 'text-teal-700'}`}>{dialog.title}</h3>
+                                    <p className="text-gray-600 mb-6 text-sm whitespace-pre-line">{dialog.msg}</p>
+                                    <div className="flex gap-3 justify-center">
+                                        {dialog.type === 'confirm' && (
+                                            <button onClick={() => setDialog(prev => ({...prev, show: false}))} className="px-4 py-2.5 rounded-xl bg-gray-100 text-gray-600 font-medium text-sm flex-1 hover:bg-gray-200 transition-colors">取消</button>
+                                        )}
+                                        <button onClick={dialog.onConfirm} className={`px-4 py-2.5 rounded-xl text-white font-medium text-sm flex-1 transition-colors shadow-lg shadow-teal-100 ${dialog.type === 'confirm' ? 'bg-red-500 hover:bg-red-600' : 'bg-gradient-to-r from-teal-400 to-teal-500 hover:from-teal-500 hover:to-teal-600'}`}>確定</button>
+                                    </div>
                                 </div>
+                            </div>
+                        )}
+
+                        {view === 'login' ? (
+                            <LoginView onLogin={handleLogin} defaultKey={apiKey} history={loginHistory} />
+                        ) : (
+                            <>
+                                {/* Combined Sticky Header Block */}
+                                <div className="sticky top-0 z-20">
+                                    <Header 
+                                        tripId={tripId} 
+                                        expenses={filteredExpenses} 
+                                        filterCategory={filterCategory}
+                                        onLogout={() => window.location.reload()} 
+                                        onAnalysis={() => setShowAnalysis(true)} 
+                                        onStats={() => setShowStats(true)}
+                                    />
+                                    
+                                    {/* Integrated Filter Bar */}
+                                    <div className="bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm px-2 py-2 flex items-center">
+                                        <div className="flex-1 overflow-x-auto no-scrollbar flex items-center gap-2 px-1">
+                                            <button onClick={() => setFilterCategory('All')} className={`px-3 py-1.5 rounded-xl text-sm whitespace-nowrap transition-all flex-shrink-0 ${filterCategory === 'All' ? 'bg-teal-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>全部</button>
+                                            {categories.map(c => (
+                                                <button key={c} onClick={() => setFilterCategory(c)} className={`px-3 py-1.5 rounded-xl text-sm whitespace-nowrap transition-all flex-shrink-0 ${filterCategory === c ? 'bg-teal-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{c}</button>
+                                            ))}
+                                        </div>
+                                        <div className="pl-2 border-l border-gray-200 ml-1">
+                                            <button onClick={() => setShowCatManager(true)} className="w-8 h-8 rounded-full text-gray-400 flex items-center justify-center hover:bg-gray-100 hover:text-teal-600 transition-colors" title="管理分類">
+                                                <i className="fa-solid fa-gear"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="p-4 pt-4 pb-28">
+                                    {view === 'list' && <ExpenseList expenses={filteredExpenses} onEdit={(item) => { setEditItem(item); setView('add'); }} onDelete={handleDelete} />}
+                                    {view === 'add' && <AddForm apiKey={apiKey} onUpdateKey={handleUpdateKey} categories={categories} onAddCategory={handleAddCategory} initialData={editItem} onSave={handleSave} onBatchSave={handleBatchSave} onCancel={() => { setView('list'); setEditItem(null); }} showAlert={showAlert} />}
+                                </div>
+
+                                {/* Modals - Glass Style */}
+                                {showAnalysis && <AnalysisModal expenses={expenses} apiKey={apiKey} onClose={() => setShowAnalysis(false)} />}
+                                {showStats && <StatsModal expenses={expenses} onClose={() => setShowStats(false)} />}
+                                {showCatManager && <CategoryManagerModal categories={categories} onAdd={handleAddCategory} onEdit={handleEditCategory} onDelete={handleDeleteCategory} onClose={() => setShowCatManager(false)} />}
+                            </>
+                        )}
+                    </div>
+
+                    {/* Floating Add Button - OUTSIDE Mobile Container */}
+                    {view === 'list' && (
+                        <div className="fab-container">
+                            <div className="fab-wrapper">
+                                <button onClick={() => setView('add')} className="fab-btn">
+                                    <i className="fa-solid fa-plus"></i>
+                                </button>
                             </div>
                         </div>
                     )}
-
-                    {view === 'login' ? (
-                        <LoginView onLogin={handleLogin} defaultKey={apiKey} history={loginHistory} />
-                    ) : (
-                        <>
-                            <Header 
-                                tripId={tripId} 
-                                expenses={filteredExpenses} 
-                                filterCategory={filterCategory}
-                                onLogout={() => window.location.reload()} 
-                                onAnalysis={() => setShowAnalysis(true)} 
-                                onStats={() => setShowStats(true)}
-                            />
-                            
-                            {/* Filter Bar - Floating Glass Style */}
-                            <div className="sticky top-[100px] z-10 px-2 py-2">
-                                <div className="bg-white/80 backdrop-blur-md border border-white/50 rounded-2xl shadow-sm flex items-center p-1">
-                                    <div className="flex-1 overflow-x-auto no-scrollbar flex items-center gap-2 px-1">
-                                        <button onClick={() => setFilterCategory('All')} className={`px-4 py-1.5 rounded-xl text-sm whitespace-nowrap transition-all flex-shrink-0 ${filterCategory === 'All' ? 'bg-teal-500 text-white shadow-md' : 'text-gray-500 hover:bg-gray-100'}`}>全部</button>
-                                        {categories.map(c => (
-                                            <button key={c} onClick={() => setFilterCategory(c)} className={`px-4 py-1.5 rounded-xl text-sm whitespace-nowrap transition-all flex-shrink-0 ${filterCategory === c ? 'bg-teal-500 text-white shadow-md' : 'text-gray-500 hover:bg-gray-100'}`}>{c}</button>
-                                        ))}
-                                    </div>
-                                    <div className="pl-2 border-l border-gray-200 ml-1">
-                                        <button onClick={() => setShowCatManager(true)} className="w-8 h-8 rounded-full text-gray-400 flex items-center justify-center hover:bg-gray-100 hover:text-teal-600 transition-colors" title="管理分類">
-                                            <i className="fa-solid fa-gear"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="p-4 pt-2">
-                                {view === 'list' && <ExpenseList expenses={filteredExpenses} onEdit={(item) => { setEditItem(item); setView('add'); }} onDelete={handleDelete} />}
-                                {view === 'add' && <AddForm apiKey={apiKey} onUpdateKey={handleUpdateKey} categories={categories} onAddCategory={handleAddCategory} initialData={editItem} onSave={handleSave} onBatchSave={handleBatchSave} onCancel={() => { setView('list'); setEditItem(null); }} showAlert={showAlert} />}
-                            </div>
-
-                            {/* Modals - Glass Style */}
-                            {showAnalysis && <AnalysisModal expenses={expenses} apiKey={apiKey} onClose={() => setShowAnalysis(false)} />}
-                            {showStats && <StatsModal expenses={expenses} onClose={() => setShowStats(false)} />}
-                            {showCatManager && <CategoryManagerModal categories={categories} onAdd={handleAddCategory} onEdit={handleEditCategory} onDelete={handleDeleteCategory} onClose={() => setShowCatManager(false)} />}
-
-                            {view === 'list' && (
-                                <button onClick={() => setView('add')} className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-teal-400 to-teal-600 text-white rounded-full shadow-lg shadow-teal-200/50 flex items-center justify-center text-2xl hover:scale-105 active:scale-95 transition-all z-20 border-2 border-white"><i className="fa-solid fa-plus"></i></button>
-                            )}
-                        </>
-                    )}
-                </div>
+                </>
             );
         };
 
@@ -426,9 +466,19 @@
                             <input value={code} onChange={e => setCode(e.target.value)} className="input-field uppercase text-center font-bold tracking-widest text-teal-700 text-lg" placeholder="例如 JAPAN" />
                             {history.length > 0 && <div className="mt-3 flex flex-wrap gap-2 justify-center">{history.map(h => <button key={h} onClick={() => setCode(h)} className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${code === h ? 'bg-teal-50 border-teal-200 text-teal-700 font-bold' : 'bg-white border-gray-100 text-gray-500 hover:bg-gray-50'}`}>{h}</button>)}</div>}
                         </div>
-                        <div className="text-left mb-8">
+                        <div className="text-left mb-8 relative">
                             <label className="input-label ml-1">Gemini API Key</label>
-                            <input type="password" value={key} onChange={e => setKey(e.target.value)} className="input-field text-sm" placeholder="請貼上 Key" />
+                            <div className="relative">
+                                <input type="password" value={key} onChange={e => setKey(e.target.value)} className="input-field text-sm pr-10" placeholder="請貼上 Key (自動記憶)" />
+                                {key && (
+                                    <button 
+                                        onClick={() => setKey('')}
+                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-teal-600"
+                                    >
+                                        <i className="fa-solid fa-circle-xmark"></i>
+                                    </button>
+                                )}
+                            </div>
                             {defaultKey && <p className="text-xs text-teal-600 mt-1.5 ml-1 flex items-center"><i className="fa-solid fa-check-circle mr-1"></i> 已自動載入</p>}
                         </div>
                         <button onClick={() => onLogin(code, key)} className="btn-primary text-lg shadow-lg shadow-teal-200/50">開始記帳</button>
@@ -452,7 +502,7 @@
             }, [expenses]);
 
             return (
-                <div className="header-glass text-white p-5 sticky top-0 z-20 shadow-sm min-h-[100px] flex flex-col justify-between rounded-b-[2rem] mx-[-1px] mb-[-20px] pb-8">
+                <div className="header-glass text-white p-5 pb-4 min-h-[90px] flex flex-col justify-between">
                     <div className="flex justify-between items-start mb-2">
                         <div>
                             <span className="text-teal-50 text-xs uppercase tracking-wider block font-medium opacity-80">Project</span>
@@ -475,6 +525,38 @@
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- API Key Rescue Modal ---
+        const ApiKeyRescueModal = ({ onSave, onCancel }) => {
+            const [newKey, setNewKey] = React.useState('');
+            return (
+                <div className="fixed inset-0 bg-black/50 z-[1000] flex items-center justify-center p-4 fade-in">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xs p-6 text-center">
+                        <div className="w-12 h-12 rounded-full bg-red-100 text-red-500 flex items-center justify-center mx-auto mb-3">
+                            <i className="fa-solid fa-key text-xl"></i>
+                        </div>
+                        <h3 className="font-bold text-lg mb-2 text-gray-800">API Key 無效</h3>
+                        <p className="text-gray-500 text-sm mb-4">您的 AI 金鑰似乎有問題。請輸入新的 Key 以繼續。</p>
+                        <input 
+                            value={newKey}
+                            onChange={(e) => setNewKey(e.target.value)}
+                            className="input-field text-sm mb-4" 
+                            placeholder="貼上新的 API Key" 
+                            autoFocus
+                        />
+                        <div className="flex gap-2">
+                            <button onClick={onCancel} className="btn-secondary flex-1 py-2 text-sm">取消</button>
+                            <button 
+                                onClick={() => { if(newKey.trim()) onSave(newKey.trim()); }} 
+                                className="btn-primary flex-1 py-2 text-sm bg-teal-500 hover:bg-teal-600"
+                            >
+                                更新並重試
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -656,18 +738,42 @@
             const [isAddingCat, setIsAddingCat] = React.useState(false);
             const [newCatName, setNewCatName] = React.useState("");
             const [classifying, setClassifying] = React.useState(false);
+            const [showRescueModal, setShowRescueModal] = React.useState(false);
             const fileRef = React.useRef(null);
 
             React.useEffect(() => { if (initialData) setForm(initialData); }, [initialData]);
 
+            // Auto fetch rate when currency changes
             React.useEffect(() => {
                 if (form.currency === 'TWD') {
                     setForm(p => ({ ...p, twdAmount: p.foreignAmount, exchangeRate: 1 }));
-                } else if (form.foreignAmount && form.exchangeRate) {
+                } else {
+                    const fetchRate = async () => {
+                        try {
+                            const res = await fetch(`https://api.exchangerate-api.com/v4/latest/${form.currency}`);
+                            const data = await res.json();
+                            const rate = data.rates.TWD;
+                            if (rate) {
+                                setForm(p => {
+                                    const twd = p.foreignAmount ? Math.round(parseFloat(p.foreignAmount) * rate) : '';
+                                    return { ...p, exchangeRate: rate, twdAmount: twd };
+                                });
+                            }
+                        } catch (e) { console.error("Rate fetch failed", e); }
+                    };
+                    fetchRate();
+                }
+            }, [form.currency]);
+
+            // Auto calc TWD when amount/rate changes
+            React.useEffect(() => {
+                if (form.currency !== 'TWD' && form.foreignAmount && form.exchangeRate) {
                     const twd = Math.round(parseFloat(form.foreignAmount) * parseFloat(form.exchangeRate));
                     setForm(p => ({ ...p, twdAmount: twd }));
+                } else if (form.currency === 'TWD') {
+                    setForm(p => ({ ...p, twdAmount: p.foreignAmount }));
                 }
-            }, [form.foreignAmount, form.exchangeRate, form.currency]);
+            }, [form.foreignAmount, form.exchangeRate]);
 
             const handleSmartClassify = async () => {
                 if (!form.item.trim()) return showAlert("請先輸入品名");
@@ -702,8 +808,7 @@
                 if (!file) return;
                 const currentKey = apiKey ? apiKey.trim() : "";
                 if (!currentKey) { 
-                    const newKey = prompt("錯誤：API Key 為空。請現在輸入有效的 Gemini API Key：");
-                    if (newKey && onUpdateKey(newKey)) showAlert("API Key 已更新，請重新點擊「拍收據」按鈕。");
+                    setShowRescueModal(true);
                     e.target.value = ''; return; 
                 }
                 setLoading(true);
@@ -731,8 +836,9 @@
                         const data = await response.json();
                         if (data.error) {
                             if (data.error.code === 400 && (data.error.message.includes("API key not valid") || data.error.message.includes("API key"))) {
-                                const newKey = prompt("API Key 無效或過期 (Error 400/403)。\n請輸入新的有效 Key 以繼續：");
-                                if (newKey && onUpdateKey(newKey)) { showAlert("Key 已更新！請再次點擊「拍收據」重試。"); return; }
+                                setLoading(false);
+                                setShowRescueModal(true);
+                                return;
                             }
                             throw new Error(`API 錯誤: ${data.error.message}`);
                         }
@@ -741,6 +847,17 @@
                         const jsonMatch = text.match(/\{[\s\S]*\}/);
                         const cleanText = jsonMatch ? jsonMatch[0] : text;
                         let result = JSON.parse(cleanText);
+                        
+                        // Auto fetch rate if currency detected
+                        let rate = 1;
+                        if (result.currency && result.currency !== 'TWD') {
+                             try {
+                                const res = await fetch(`https://api.exchangerate-api.com/v4/latest/${result.currency}`);
+                                const rData = await res.json();
+                                rate = rData.rates.TWD || 0.22;
+                             } catch(e) { console.log("Rate fetch failed in AI", e); rate = 0.22; }
+                        }
+
                         if (result.items && result.items.length > 0) {
                             const storeName = result.store ? ` (@${result.store})` : '';
                             const mappedItems = result.items.map(i => ({
@@ -748,12 +865,12 @@
                             }));
                             setScannedItems(mappedItems);
                             setSelectedIndices(new Set(result.items.map((_, i) => i)));
-                            if (result.currency) setScanSettings(prev => ({ ...prev, currency: result.currency }));
+                            if (result.currency) setScanSettings(prev => ({ ...prev, currency: result.currency, exchangeRate: rate }));
                         } else {
                             showAlert("未偵測到細項，將轉為單筆輸入模式。");
                             if (result.amount || result.total) {
                                 const storeName = result.store ? ` (@${result.store})` : '';
-                                setForm(prev => ({ ...prev, foreignAmount: result.amount || result.total, item: (result.store || '消費') + storeName, currency: result.currency || prev.currency }));
+                                setForm(prev => ({ ...prev, foreignAmount: result.amount || result.total, item: (result.store || '消費') + storeName, currency: result.currency || prev.currency, exchangeRate: rate }));
                             }
                         }
                     };
@@ -781,8 +898,16 @@
                 setScannedItems([]);
             };
 
+            const handleRescueKey = (newKey) => {
+                if (onUpdateKey(newKey)) {
+                    setShowRescueModal(false);
+                    alert("Key 已更新！請再次點擊「拍收據」重試。");
+                }
+            };
+
             return (
                 <div className="card-soft p-5 pb-8 mb-4">
+                    {showRescueModal && <ApiKeyRescueModal onSave={handleRescueKey} onCancel={() => setShowRescueModal(false)} />}
                     <h2 className="text-lg font-bold text-gray-800 mb-5 flex justify-between items-center">
                         <span className="flex items-center"><i className={`fa-solid ${initialData ? 'fa-pen-to-square' : 'fa-plus-circle'} text-teal-500 mr-2`}></i>{initialData ? '修改花費' : '新增花費'}</span>
                         <button type="button" onClick={() => fileRef.current.click()} disabled={loading} className="text-sm bg-teal-50 text-teal-600 px-3 py-1.5 rounded-lg flex items-center gap-2 hover:bg-teal-100 transition-colors font-medium">
