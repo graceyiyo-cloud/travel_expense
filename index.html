@@ -3,15 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>基礎記帳 V25 (AI進度條版)</title>
+    <title>基礎記帳 V26 (UI優化版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Firebase SDKs (Compat Version) -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
@@ -118,11 +116,12 @@
         }
         .btn-danger { background-color: #ef4444; color: white; padding: 12px; border-radius: 8px; width: 100%; font-weight: 500; text-align: center; }
         
+        /* Updated Card Style: More distinct border and shadow */
         .card-soft {
             background: white;
             border-radius: 12px;
-            border: 1px solid #f5f5f4; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02); 
+            border: 1px solid #d6d3d1; /* Darker border (Stone-300) for better visibility */
+            box-shadow: 0 3px 6px rgba(0,0,0,0.05); /* Slightly stronger shadow */
         }
 
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -350,8 +349,8 @@
                 const relatedExpenses = expenses.filter(e => e.category === oldName);
                 if (relatedExpenses.length > 0) {
                     const ref = db.collection('artifacts').doc(appId)
-                                  .collection('public').doc('data')
-                                  .collection(`${tripId}_simple_v1`);
+                                      .collection('public').doc('data')
+                                      .collection(`${tripId}_simple_v1`);
                     relatedExpenses.forEach(exp => {
                         const docRef = ref.doc(exp.id);
                         batch.update(docRef, { category: newName });
@@ -385,8 +384,8 @@
             const handleSave = async (data) => {
                 try {
                     const ref = db.collection('artifacts').doc(appId)
-                                  .collection('public').doc('data')
-                                  .collection(`${tripId}_simple_v1`);
+                                      .collection('public').doc('data')
+                                      .collection(`${tripId}_simple_v1`);
                     if (data.id) {
                         const { id, ...updateData } = data;
                         await ref.doc(id).update(updateData);
@@ -406,8 +405,8 @@
             const handleBatchSave = async (items) => {
                 try {
                     const ref = db.collection('artifacts').doc(appId)
-                                  .collection('public').doc('data')
-                                  .collection(`${tripId}_simple_v1`);
+                                      .collection('public').doc('data')
+                                      .collection(`${tripId}_simple_v1`);
                     const promises = items.map(item => {
                         return ref.add({
                             ...item,
@@ -840,7 +839,16 @@
                                 </div>
                                 <div className="flex flex-col">
                                     <div className="flex items-baseline gap-2">
-                                        <span className="font-bold text-stone-800 text-xl tracking-tight">{item.currency !== 'TWD' ? `${item.currency} ${Number(item.foreignAmount).toLocaleString()}` : formatMoney(item.twdAmount)}</span>
+                                        {/* Logic: If foreign currency, use text-lg (smaller). If TWD, use text-xl (original size). */}
+                                        {item.currency !== 'TWD' ? (
+                                            <span className="font-bold text-stone-800 text-lg tracking-tight">
+                                                {item.currency} {Number(item.foreignAmount).toLocaleString()}
+                                            </span>
+                                        ) : (
+                                            <span className="font-bold text-stone-800 text-xl tracking-tight">
+                                                {formatMoney(item.twdAmount)}
+                                            </span>
+                                        )}
                                         {item.currency !== 'TWD' && <span className="text-xs text-stone-400 font-medium">≈ NT$ {Number(item.twdAmount).toLocaleString()}</span>}
                                     </div>
                                     <div className="text-[10px] text-stone-400 mt-1 font-medium">{formatDateTime(item.createdAt?.seconds)}</div>
