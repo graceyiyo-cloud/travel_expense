@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>基礎記帳 V21 (搜尋功能/版面優化)</title>
+    <title>基礎記帳 V22 (顯示與操作精修)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -698,7 +698,7 @@
                                                     <div className="text-right"><span className="font-bold text-gray-800 mr-2">{formatMoney(item.totalTWD)}</span><span className="text-xs text-gray-500">({item.percent.toFixed(1)}%)</span></div>
                                                 </div>
                                                 <div className="stat-bar-bg mb-3 ml-8 w-auto h-2"><div className="stat-bar-fill h-full" style={{ width: `${item.percent}%`, backgroundColor: `hsl(${170 + idx * 25}, 75%, 45%)` }}></div></div>
-                                                <div className="pl-8 space-y-1">{item.currencies.map((c, cIdx) => (<div key={cIdx} className="flex justify-between text-xs text-gray-500 font-mono"><span>{c.curr} {Number(c.amount).toLocaleString()}</span>{c.curr !== 'TWD' && <span>≈ {formatMoney(c.twd)}</span>}</div>))}</div>
+                                                <div className="pl-8 space-y-1">{item.currencies.map((c, cIdx) => (<div key={cIdx} className="flex justify-between text-xs text-gray-500 font-mono"><span>{c.curr} {Number(c.amount).toLocaleString()}</span>{c.curr !== 'TWD' && <span>≈ NT$ {Number(c.twd).toLocaleString()}</span>}</div>))}</div>
                                             </div>
                                         );
                                     })}
@@ -754,7 +754,7 @@
                                 <div className="flex flex-col">
                                     <div className="flex items-baseline gap-2">
                                         <span className="font-extrabold text-gray-800 text-xl tracking-tight">{item.currency !== 'TWD' ? `${item.currency} ${Number(item.foreignAmount).toLocaleString()}` : formatMoney(item.twdAmount)}</span>
-                                        {item.currency !== 'TWD' && <span className="text-xs text-gray-400 font-medium">≈ {formatMoney(item.twdAmount)}</span>}
+                                        {item.currency !== 'TWD' && <span className="text-xs text-gray-400 font-medium">≈ NT$ {Number(item.twdAmount).toLocaleString()}</span>}
                                     </div>
                                     <div className="text-[10px] text-gray-400 mt-1 font-medium">{formatDateTime(item.createdAt?.seconds)}</div>
                                 </div>
@@ -940,6 +940,16 @@
                     alert("Key 已更新！請再次點擊「拍收據」重試。");
                 }
             };
+            
+            // Toggle Logic for Select All Button
+            const isAllSelected = scannedItems.length > 0 && selectedIndices.size === scannedItems.length;
+            const toggleSelectAll = () => {
+                if (isAllSelected) {
+                    setSelectedIndices(new Set());
+                } else {
+                    setSelectedIndices(new Set(scannedItems.map((_, i) => i)));
+                }
+            };
 
             return (
                 <div className="card-soft p-5 pb-8 mb-4">
@@ -962,7 +972,19 @@
                                     {scanSettings.currency !== 'TWD' && (<div><label className="input-label text-xs">匯率</label><input type="number" inputMode="decimal" value={scanSettings.exchangeRate} onChange={e => setScanSettings({...scanSettings, exchangeRate: e.target.value})} className="input-field input-sm" /></div>)}
                                 </div>
                             </div>
-                            <div className="flex justify-between items-center mb-2"><span className="text-sm text-gray-500">勾選確認資料:</span><button type="button" onClick={() => setSelectedIndices(new Set(scannedItems.map((_, i) => i)))} className="text-xs text-teal-600 underline font-medium">全選</button></div>
+                            
+                            {/* Optimized Select All Button */}
+                            <div className="flex justify-between items-center mb-3">
+                                <span className="text-sm text-gray-500 font-medium">確認明細 ({selectedIndices.size}/{scannedItems.length})</span>
+                                <button 
+                                    type="button" 
+                                    onClick={toggleSelectAll} 
+                                    className={`text-xs px-3 py-1.5 rounded-full font-bold transition-all shadow-sm ${isAllSelected ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-teal-50 text-teal-600 border border-teal-100'}`}
+                                >
+                                    {isAllSelected ? '取消全選' : '全選'}
+                                </button>
+                            </div>
+                            
                             <div className="space-y-3 max-h-[60vh] overflow-y-auto pb-2">
                                 {scannedItems.map((item, idx) => (
                                     <div key={idx} className={`border rounded-xl p-3 transition-colors ${selectedIndices.has(idx) ? 'bg-white border-teal-200 shadow-sm' : 'bg-gray-50 border-gray-100 opacity-60'}`}>
@@ -979,7 +1001,7 @@
                                                         <input type="number" value={item.amount} onChange={(e) => updateScannedItem(idx, 'amount', e.target.value)} className="border-b border-dashed border-gray-300 w-24 text-sm font-mono bg-transparent text-right focus:border-teal-500 focus:outline-none font-bold text-gray-800" />
                                                     </div>
                                                 </div>
-                                                {scanSettings.currency !== 'TWD' && <div className="text-right text-xs text-teal-600 font-medium">≈ {formatMoney(Math.round(item.amount * scanSettings.exchangeRate))}</div>}
+                                                {scanSettings.currency !== 'TWD' && <div className="text-right text-xs text-teal-600 font-medium">≈ NT$ {Number(Math.round(item.amount * scanSettings.exchangeRate)).toLocaleString()}</div>}
                                             </div>
                                         </div>
                                     </div>
