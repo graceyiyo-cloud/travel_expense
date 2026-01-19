@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>基礎記帳 V19 (版面精修版)</title>
+    <title>基礎記帳 V20 (視窗定位修復)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -96,7 +96,7 @@
             left: 0;
             right: 0;
             z-index: 50;
-            pointer-events: none; /* Allow clicks to pass through empty space */
+            pointer-events: none;
             display: flex;
             justify-content: center;
         }
@@ -108,7 +108,7 @@
             justify-content: flex-end;
         }
         .fab-btn {
-            pointer-events: auto; /* Enable clicks on the button */
+            pointer-events: auto;
             width: 3.5rem;
             height: 3.5rem;
             border-radius: 9999px;
@@ -375,21 +375,6 @@
             return (
                 <>
                     <div className="mobile-container">
-                        {dialog.show && (
-                            <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[999] flex items-center justify-center p-4 fade-in">
-                                <div className="bg-white rounded-2xl shadow-xl w-full max-w-xs transform transition-all scale-100 p-6 text-center border border-white/50">
-                                    <h3 className={`font-bold text-lg mb-2 ${dialog.type === 'confirm' ? 'text-red-500' : 'text-teal-700'}`}>{dialog.title}</h3>
-                                    <p className="text-gray-600 mb-6 text-sm whitespace-pre-line">{dialog.msg}</p>
-                                    <div className="flex gap-3 justify-center">
-                                        {dialog.type === 'confirm' && (
-                                            <button onClick={() => setDialog(prev => ({...prev, show: false}))} className="px-4 py-2.5 rounded-xl bg-gray-100 text-gray-600 font-medium text-sm flex-1 hover:bg-gray-200 transition-colors">取消</button>
-                                        )}
-                                        <button onClick={dialog.onConfirm} className={`px-4 py-2.5 rounded-xl text-white font-medium text-sm flex-1 transition-colors shadow-lg shadow-teal-100 ${dialog.type === 'confirm' ? 'bg-red-500 hover:bg-red-600' : 'bg-gradient-to-r from-teal-400 to-teal-500 hover:from-teal-500 hover:to-teal-600'}`}>確定</button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
                         {view === 'login' ? (
                             <LoginView onLogin={handleLogin} defaultKey={apiKey} history={loginHistory} />
                         ) : (
@@ -425,16 +410,37 @@
                                     {view === 'list' && <ExpenseList expenses={filteredExpenses} onEdit={(item) => { setEditItem(item); setView('add'); }} onDelete={handleDelete} />}
                                     {view === 'add' && <AddForm apiKey={apiKey} onUpdateKey={handleUpdateKey} categories={categories} onAddCategory={handleAddCategory} initialData={editItem} onSave={handleSave} onBatchSave={handleBatchSave} onCancel={() => { setView('list'); setEditItem(null); }} showAlert={showAlert} />}
                                 </div>
-
-                                {/* Modals - Glass Style */}
-                                {showAnalysis && <AnalysisModal expenses={expenses} apiKey={apiKey} onClose={() => setShowAnalysis(false)} />}
-                                {showStats && <StatsModal expenses={expenses} onClose={() => setShowStats(false)} />}
-                                {showCatManager && <CategoryManagerModal categories={categories} onAdd={handleAddCategory} onEdit={handleEditCategory} onDelete={handleDeleteCategory} onClose={() => setShowCatManager(false)} />}
                             </>
                         )}
                     </div>
 
-                    {/* Floating Add Button - OUTSIDE Mobile Container */}
+                    {/* MODALS & DIALOGS MOVED OUTSIDE MOBILE CONTAINER FOR CORRECT POSITIONING */}
+                    
+                    {/* Custom Dialog - Soft Style */}
+                    {dialog.show && (
+                        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[3000] flex items-center justify-center p-4 fade-in">
+                            <div className="bg-white rounded-2xl shadow-xl w-full max-w-xs transform transition-all scale-100 p-6 text-center border border-white/50">
+                                <h3 className={`font-bold text-lg mb-2 ${dialog.type === 'confirm' ? 'text-red-500' : 'text-teal-700'}`}>{dialog.title}</h3>
+                                <p className="text-gray-600 mb-6 text-sm whitespace-pre-line">{dialog.msg}</p>
+                                <div className="flex gap-3 justify-center">
+                                    {dialog.type === 'confirm' && (
+                                        <button onClick={() => setDialog(prev => ({...prev, show: false}))} className="px-4 py-2.5 rounded-xl bg-gray-100 text-gray-600 font-medium text-sm flex-1 hover:bg-gray-200 transition-colors">取消</button>
+                                    )}
+                                    <button onClick={dialog.onConfirm} className={`px-4 py-2.5 rounded-xl text-white font-medium text-sm flex-1 transition-colors shadow-lg shadow-teal-100 ${dialog.type === 'confirm' ? 'bg-red-500 hover:bg-red-600' : 'bg-gradient-to-r from-teal-400 to-teal-500 hover:from-teal-500 hover:to-teal-600'}`}>確定</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {view !== 'login' && (
+                        <>
+                            {showAnalysis && <AnalysisModal expenses={expenses} apiKey={apiKey} onClose={() => setShowAnalysis(false)} />}
+                            {showStats && <StatsModal expenses={expenses} onClose={() => setShowStats(false)} />}
+                            {showCatManager && <CategoryManagerModal categories={categories} onAdd={handleAddCategory} onEdit={handleEditCategory} onDelete={handleDeleteCategory} onClose={() => setShowCatManager(false)} />}
+                        </>
+                    )}
+
+                    {/* Floating Add Button */}
                     {view === 'list' && (
                         <div className="fab-container">
                             <div className="fab-wrapper">
@@ -573,7 +579,7 @@
             const saveEdit = (oldName) => { if (editValue.trim() && editValue !== oldName) { onEdit(oldName, editValue.trim()); } setEditingIndex(-1); };
 
             return (
-                <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4 fade-in">
+                <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 fade-in">
                     <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-sm flex flex-col max-h-[80vh] border border-white/50">
                         <div className="p-5 border-b border-gray-100 flex justify-between items-center">
                             <h3 className="font-bold text-gray-800 text-lg">分類管理</h3>
@@ -641,7 +647,7 @@
             };
 
             return (
-                <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 fade-in">
+                <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 fade-in">
                     <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col border border-white/50">
                         <div className="p-5 border-b border-gray-100 flex justify-between items-center">
                             <h3 className="font-bold text-gray-800 text-lg"><i className="fa-solid fa-calculator mr-2 text-teal-500"></i>消費計算機</h3>
@@ -695,7 +701,7 @@
                 analyze();
             }, []);
             return (
-                <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 fade-in">
+                <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 fade-in">
                     <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col border border-white/50">
                         <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-teal-500 text-white rounded-t-3xl shadow-sm"><h3 className="font-bold text-lg"><i className="fa-solid fa-chart-line mr-2"></i>AI 記帳分析</h3><button onClick={onClose}><i className="fa-solid fa-xmark text-xl text-teal-100 hover:text-white"></i></button></div>
                         <div className="p-6 overflow-y-auto">{loading ? <div className="text-center py-8"><div className="loader mx-auto mb-4"></div><p className="text-gray-500">AI 分析中...</p></div> : <div className="prose prose-sm text-gray-700 whitespace-pre-wrap leading-relaxed markdown-content">{analysis}</div>}</div>
@@ -711,18 +717,20 @@
                 <div className="space-y-3 pb-24">
                     {expenses.map(item => (
                         <div key={item.id} onClick={() => onEdit(item)} className="card-soft flex justify-between items-center active:scale-[0.98] transition-transform p-4 cursor-pointer">
-                            <div className="flex-1">
-                                <div className="mb-1.5">
-                                    <span className="bg-teal-50 text-teal-700 px-2.5 py-0.5 rounded-lg text-xs font-bold border border-teal-100 inline-block mb-1">{item.category}</span>
-                                    <div className="font-bold text-gray-700 break-words leading-snug pr-2">{item.item || "未命名"}</div>
+                            <div className="flex-1 min-w-0 pr-3">
+                                <div className="mb-2">
+                                    <span className="bg-teal-50 text-teal-700 px-2 py-0.5 rounded-lg text-[10px] font-bold border border-teal-100 inline-block mb-1 tracking-wide">{item.category}</span>
+                                    <div className="font-bold text-gray-700 text-base leading-snug break-words">{item.item || "未命名"}</div>
                                 </div>
-                                <div className="flex items-baseline gap-2">
-                                    <span className="font-extrabold text-gray-800 text-xl tracking-tight">{item.currency !== 'TWD' ? `${item.currency} ${Number(item.foreignAmount).toLocaleString()}` : formatMoney(item.twdAmount)}</span>
-                                    {item.currency !== 'TWD' && <span className="text-xs text-gray-400 font-medium">≈ {formatMoney(item.twdAmount)}</span>}
+                                <div className="flex flex-col">
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="font-extrabold text-gray-800 text-xl tracking-tight">{item.currency !== 'TWD' ? `${item.currency} ${Number(item.foreignAmount).toLocaleString()}` : formatMoney(item.twdAmount)}</span>
+                                        {item.currency !== 'TWD' && <span className="text-xs text-gray-400 font-medium">≈ {formatMoney(item.twdAmount)}</span>}
+                                    </div>
+                                    <div className="text-[10px] text-gray-400 mt-1 font-medium">{formatDateTime(item.createdAt?.seconds)}</div>
                                 </div>
-                                <div className="text-[10px] text-gray-400 mt-1 font-medium">{formatDateTime(item.createdAt?.seconds)}</div>
                             </div>
-                            <button onClick={(e) => { e.stopPropagation(); onDelete(item.id); }} className="w-10 h-10 rounded-full flex items-center justify-center text-gray-300 hover:bg-red-50 hover:text-red-500 transition-colors"><i className="fa-solid fa-trash"></i></button>
+                            <button onClick={(e) => { e.stopPropagation(); onDelete(item.id); }} className="w-10 h-10 rounded-full flex items-center justify-center text-gray-300 hover:bg-red-50 hover:text-red-500 transition-colors flex-shrink-0"><i className="fa-solid fa-trash"></i></button>
                         </div>
                     ))}
                 </div>
@@ -848,7 +856,6 @@
                         const cleanText = jsonMatch ? jsonMatch[0] : text;
                         let result = JSON.parse(cleanText);
                         
-                        // Auto fetch rate if currency detected
                         let rate = 1;
                         if (result.currency && result.currency !== 'TWD') {
                              try {
