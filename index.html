@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>基礎記帳 V31 (手機拖曳修復版)</title>
+    <title>基礎記帳 V32 (UI微調版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -225,6 +225,9 @@
 
         // --- 3. 輔助功能 ---
         const formatMoney = (amount, currency = 'TWD') => {
+            if (currency === 'TWD') {
+                return `NT$ ${new Intl.NumberFormat('zh-TW', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount)}`;
+            }
             return new Intl.NumberFormat('zh-TW', { 
                 style: 'currency', 
                 currency: currency, 
@@ -836,7 +839,7 @@
                                                         <input type="checkbox" className="custom-checkbox" checked={!isExcluded} onChange={() => toggleCategory(item.cat)} />
                                                         <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: `hsl(${100 + idx * 15}, 20%, 55%)` }}></div><span className="font-bold text-stone-600">{item.cat}</span></div>
                                                     </div>
-                                                    <div className="text-right"><span className="font-bold text-stone-700 mr-2">{formatMoney(item.totalTWD)}</span><span className="text-xs text-stone-400">({item.percent.toFixed(1)}%)</span></div>
+                                                    <div className="text-right"><span className="text-xs text-stone-400">({item.percent.toFixed(1)}%)</span></div>
                                                 </div>
                                                 <div className="stat-bar-bg mb-3 ml-8 w-auto h-1.5"><div className="stat-bar-fill h-full" style={{ width: `${item.percent}%`, backgroundColor: `hsl(${100 + idx * 15}, 20%, 55%)` }}></div></div>
                                                 <div className="pl-8 space-y-1">{item.currencies.map((c, cIdx) => (<div key={cIdx} className="flex justify-between text-xs text-stone-500 font-mono"><span>{c.curr} {Number(c.amount).toLocaleString()}</span>{c.curr !== 'TWD' && <span>≈ {formatMoney(c.twd)}</span>}</div>))}</div>
