@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>基礎記帳 V22 (顯示與操作精修)</title>
+    <title>基礎記帳 V23 (文青風格版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -16,80 +16,136 @@
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        sage: {
+                            50: '#f4f7f4',
+                            100: '#e3ebe3',
+                            200: '#c5d6c6',
+                            300: '#9db89f',
+                            400: '#769679', // Primary Artsy Green
+                            500: '#5a7a5d',
+                            600: '#466149',
+                            700: '#3a4e3c',
+                            800: '#314033',
+                            900: '#2a352b',
+                        },
+                        paper: '#fdfbf7', // Warm off-white background
+                        stone: {
+                            850: '#1c1917', // High contrast text
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
-        /* Soft Mesh Gradient Background */
+        /* Artsy Paper Background */
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            background-color: #f0fdfa;
-            background-image: 
-                radial-gradient(at 0% 0%, hsla(168,76%,85%,1) 0px, transparent 50%),
-                radial-gradient(at 100% 0%, hsla(200,80%,90%,1) 0px, transparent 50%),
-                radial-gradient(at 100% 100%, hsla(168,76%,85%,1) 0px, transparent 50%),
-                radial-gradient(at 0% 100%, hsla(200,80%,90%,1) 0px, transparent 50%);
-            background-attachment: fixed;
-            background-size: cover;
-            color: #334155;
+            background-color: #fdfbf7; /* Paper color */
+            color: #44403c; /* Stone-700 for text */
             -webkit-tap-highlight-color: transparent;
         } 
         
-        /* Container styling */
+        /* Container styling - Clean, minimal shadow */
         .mobile-container { 
             max-width: 600px; 
             margin: 0 auto; 
             min-height: 100vh; 
-            background-color: rgba(255, 255, 255, 0.65); 
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            background-color: #ffffff;
             position: relative; 
-            box-shadow: 0 0 40px rgba(20, 184, 166, 0.1);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.03); /* Very subtle shadow */
             display: flex;
             flex-direction: column;
             padding-bottom: 100px;
+            border-left: 1px solid #f5f5f4;
+            border-right: 1px solid #f5f5f4;
         }
         
-        .input-label { display: block; font-size: 0.85rem; color: #64748b; margin-bottom: 4px; font-weight: 500; }
+        .input-label { display: block; font-size: 0.85rem; color: #78716c; margin-bottom: 6px; font-weight: 500; letter-spacing: 0.02em; }
         
-        .input-field { width: 100%; padding: 12px; border: 1px solid rgba(226, 232, 240, 0.8); border-radius: 12px; font-size: 1rem; transition: all 0.2s; -webkit-appearance: none; background: rgba(255, 255, 255, 0.9); }
-        .input-field:focus { border-color: #14b8a6; outline: none; ring: 3px solid rgba(20, 184, 166, 0.15); background: white; } 
+        /* Minimalist Inputs */
+        .input-field { 
+            width: 100%; 
+            padding: 12px; 
+            border: 1px solid #e7e5e4; 
+            border-radius: 8px; 
+            font-size: 1rem; 
+            transition: all 0.2s; 
+            -webkit-appearance: none; 
+            background: #fafaf9; /* Stone-50 */
+            color: #44403c;
+        }
+        .input-field:focus { 
+            border-color: #769679; /* Sage-400 */
+            outline: none; 
+            background: white;
+            box-shadow: 0 0 0 2px rgba(118, 150, 121, 0.1); 
+        } 
+        .input-field::placeholder { color: #a8a29e; }
         
         .input-sm { padding: 8px; font-size: 0.9rem; }
         
+        /* Buttons - Matte Finish */
         .btn-primary { 
-            background: linear-gradient(135deg, #2dd4bf 0%, #0d9488 100%); 
-            color: white; padding: 12px; border-radius: 12px; width: 100%; font-weight: 600; text-align: center; 
-            box-shadow: 0 4px 12px rgba(20, 184, 166, 0.25); 
-            transition: all 0.2s; border: none;
+            background-color: #769679; /* Sage-400 */
+            color: white; 
+            padding: 12px; 
+            border-radius: 8px; 
+            width: 100%; 
+            font-weight: 500; 
+            text-align: center; 
+            box-shadow: 0 2px 5px rgba(118, 150, 121, 0.2); 
+            transition: all 0.2s; 
+            border: none;
+            letter-spacing: 0.02em;
         }
-        .btn-primary:active { transform: scale(0.98); box-shadow: 0 2px 6px rgba(20, 184, 166, 0.2); }
+        .btn-primary:active { transform: translateY(1px); background-color: #5a7a5d; box-shadow: none; }
         
-        .btn-secondary { background: white; color: #475569; padding: 12px; border-radius: 12px; width: 100%; font-weight: 600; text-align: center; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-        .btn-danger { background: linear-gradient(135deg, #f87171 0%, #dc2626 100%); color: white; padding: 12px; border-radius: 12px; width: 100%; font-weight: 600; text-align: center; }
+        .btn-secondary { 
+            background: white; 
+            color: #57534e; 
+            padding: 12px; 
+            border-radius: 8px; 
+            width: 100%; 
+            font-weight: 500; 
+            text-align: center; 
+            border: 1px solid #e7e5e4; 
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02); 
+        }
+        .btn-danger { background-color: #ef4444; color: white; padding: 12px; border-radius: 8px; width: 100%; font-weight: 500; text-align: center; }
         
+        /* Card Styling - Flat with border */
         .card-soft {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 16px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
-            border: 1px solid rgba(255,255,255,0.6);
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #f5f5f4; /* Stone-100 */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02); /* Very minimal shadow */
         }
 
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        .loader { border: 3px solid rgba(255,255,255,0.5); border-radius: 50%; border-top: 3px solid #14b8a6; width: 20px; height: 20px; -webkit-animation: spin 1s linear infinite; animation: spin 1s linear infinite; }
+        .loader { border: 3px solid #e7e5e4; border-radius: 50%; border-top: 3px solid #769679; width: 20px; height: 20px; -webkit-animation: spin 1s linear infinite; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        .custom-checkbox { width: 20px; height: 20px; accent-color: #14b8a6; flex-shrink: 0; }
+        .custom-checkbox { width: 20px; height: 20px; accent-color: #769679; flex-shrink: 0; }
         .markdown-content p { margin-bottom: 0.5em; }
-        .stat-bar-bg { background-color: #f1f5f9; border-radius: 9999px; height: 8px; width: 100%; overflow: hidden; }
-        .stat-bar-fill { height: 100%; border-radius: 9999px; background-color: #14b8a6; transition: width 0.5s ease-in-out; }
+        .stat-bar-bg { background-color: #f5f5f4; border-radius: 9999px; height: 6px; width: 100%; overflow: hidden; }
+        .stat-bar-fill { height: 100%; border-radius: 9999px; background-color: #769679; transition: width 0.5s ease-in-out; }
         
-        .header-glass {
-            background: rgba(20, 184, 166, 0.95);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+        /* Header - Solid Color, Matte */
+        .header-solid {
+            background-color: #769679;
+            /* No blur, solid matte color */
         }
         
-        /* Floating Button Container */
+        /* Floating Button - Matte Sage */
         .fab-container {
             position: fixed;
             bottom: 2rem;
@@ -111,18 +167,18 @@
             pointer-events: auto;
             width: 3.5rem;
             height: 3.5rem;
-            border-radius: 9999px;
-            background: linear-gradient(135deg, #2dd4bf 0%, #0d9488 100%);
+            border-radius: 50%;
+            background-color: #769679;
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 1.5rem;
-            box-shadow: 0 10px 15px -3px rgba(20, 184, 166, 0.3), 0 4px 6px -2px rgba(20, 184, 166, 0.1);
+            box-shadow: 0 4px 10px rgba(118, 150, 121, 0.4);
             border: 2px solid white;
             transition: all 0.2s;
         }
-        .fab-btn:active { transform: scale(0.95); }
+        .fab-btn:active { transform: scale(0.95); background-color: #5a7a5d; }
     </style>
 </head>
 <body>
@@ -391,15 +447,15 @@
                 <>
                     <div className="mobile-container">
                         {dialog.show && (
-                            <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[3000] flex items-center justify-center p-4 fade-in">
-                                <div className="bg-white rounded-2xl shadow-xl w-full max-w-xs transform transition-all scale-100 p-6 text-center border border-white/50">
-                                    <h3 className={`font-bold text-lg mb-2 ${dialog.type === 'confirm' ? 'text-red-500' : 'text-teal-700'}`}>{dialog.title}</h3>
-                                    <p className="text-gray-600 mb-6 text-sm whitespace-pre-line">{dialog.msg}</p>
+                            <div className="fixed inset-0 bg-stone-800/40 backdrop-blur-sm z-[3000] flex items-center justify-center p-4 fade-in">
+                                <div className="bg-white rounded-xl shadow-lg w-full max-w-xs transform transition-all scale-100 p-6 text-center border border-stone-100">
+                                    <h3 className={`font-bold text-lg mb-2 ${dialog.type === 'confirm' ? 'text-red-500' : 'text-sage-700'}`}>{dialog.title}</h3>
+                                    <p className="text-stone-600 mb-6 text-sm whitespace-pre-line">{dialog.msg}</p>
                                     <div className="flex gap-3 justify-center">
                                         {dialog.type === 'confirm' && (
-                                            <button onClick={() => setDialog(prev => ({...prev, show: false}))} className="px-4 py-2.5 rounded-xl bg-gray-100 text-gray-600 font-medium text-sm flex-1 hover:bg-gray-200 transition-colors">取消</button>
+                                            <button onClick={() => setDialog(prev => ({...prev, show: false}))} className="px-4 py-2.5 rounded-lg bg-stone-100 text-stone-600 font-medium text-sm flex-1 hover:bg-stone-200 transition-colors">取消</button>
                                         )}
-                                        <button onClick={dialog.onConfirm} className={`px-4 py-2.5 rounded-xl text-white font-medium text-sm flex-1 transition-colors shadow-lg shadow-teal-100 ${dialog.type === 'confirm' ? 'bg-red-500 hover:bg-red-600' : 'bg-gradient-to-r from-teal-400 to-teal-500 hover:from-teal-500 hover:to-teal-600'}`}>確定</button>
+                                        <button onClick={dialog.onConfirm} className={`px-4 py-2.5 rounded-lg text-white font-medium text-sm flex-1 transition-colors shadow-sm ${dialog.type === 'confirm' ? 'bg-red-500 hover:bg-red-600' : 'bg-sage-400 hover:bg-sage-500'}`}>確定</button>
                                     </div>
                                 </div>
                             </div>
@@ -421,20 +477,20 @@
                                     />
                                     
                                     {/* Integrated Search & Filter Bar */}
-                                    <div className="bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm px-3 py-3 flex flex-col gap-3">
+                                    <div className="bg-white/95 backdrop-blur-sm border-b border-stone-100 shadow-sm px-3 py-3 flex flex-col gap-3">
                                         
                                         {/* Search Input */}
                                         <div className="relative w-full">
-                                            <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                            <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-stone-400"></i>
                                             <input 
                                                 type="text" 
                                                 value={searchTerm}
                                                 onChange={(e) => setSearchTerm(e.target.value)}
                                                 placeholder="搜尋品名或金額..." 
-                                                className="w-full bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-xl pl-10 pr-10 py-2.5 outline-none focus:bg-white focus:border-teal-400 transition-all placeholder-gray-400"
+                                                className="w-full bg-stone-50 border border-stone-200 text-stone-700 text-sm rounded-lg pl-10 pr-10 py-2.5 outline-none focus:bg-white focus:border-sage-400 transition-all placeholder-stone-400"
                                             />
                                             {searchTerm && (
-                                                <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                                <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-stone-400 hover:text-stone-600">
                                                     <i className="fa-solid fa-circle-xmark"></i>
                                                 </button>
                                             )}
@@ -442,13 +498,13 @@
 
                                         <div className="flex items-center">
                                             <div className="flex-1 overflow-x-auto no-scrollbar flex items-center gap-2 px-1">
-                                                <button onClick={() => setFilterCategory('All')} className={`px-3 py-1.5 rounded-xl text-sm whitespace-nowrap transition-all flex-shrink-0 ${filterCategory === 'All' ? 'bg-teal-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>全部</button>
+                                                <button onClick={() => setFilterCategory('All')} className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-all flex-shrink-0 ${filterCategory === 'All' ? 'bg-sage-400 text-white shadow-sm' : 'bg-stone-50 text-stone-500 hover:bg-stone-100'}`}>全部</button>
                                                 {categories.map(c => (
-                                                    <button key={c} onClick={() => setFilterCategory(c)} className={`px-3 py-1.5 rounded-xl text-sm whitespace-nowrap transition-all flex-shrink-0 ${filterCategory === c ? 'bg-teal-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{c}</button>
+                                                    <button key={c} onClick={() => setFilterCategory(c)} className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-all flex-shrink-0 ${filterCategory === c ? 'bg-sage-400 text-white shadow-sm' : 'bg-stone-50 text-stone-500 hover:bg-stone-100'}`}>{c}</button>
                                                 ))}
                                             </div>
-                                            <div className="pl-2 border-l border-gray-200 ml-2">
-                                                <button onClick={() => setShowCatManager(true)} className="w-9 h-9 rounded-full bg-gray-50 text-gray-400 flex items-center justify-center hover:bg-teal-50 hover:text-teal-600 transition-colors" title="管理分類">
+                                            <div className="pl-2 border-l border-stone-200 ml-2">
+                                                <button onClick={() => setShowCatManager(true)} className="w-9 h-9 rounded-full bg-stone-50 text-stone-400 flex items-center justify-center hover:bg-sage-50 hover:text-sage-600 transition-colors" title="管理分類">
                                                     <i className="fa-solid fa-gear"></i>
                                                 </button>
                                             </div>
@@ -461,7 +517,7 @@
                                     {view === 'add' && <AddForm apiKey={apiKey} onUpdateKey={handleUpdateKey} categories={categories} onAddCategory={handleAddCategory} initialData={editItem} onSave={handleSave} onBatchSave={handleBatchSave} onCancel={() => { setView('list'); setEditItem(null); }} showAlert={showAlert} />}
                                 </div>
 
-                                {/* Modals - Glass Style */}
+                                {/* Modals - Clean Style */}
                                 {showAnalysis && <AnalysisModal expenses={expenses} apiKey={apiKey} onClose={() => setShowAnalysis(false)} />}
                                 {showStats && <StatsModal expenses={expenses} onClose={() => setShowStats(false)} />}
                                 {showCatManager && <CategoryManagerModal categories={categories} onAdd={handleAddCategory} onEdit={handleEditCategory} onDelete={handleDeleteCategory} onClose={() => setShowCatManager(false)} />}
@@ -491,15 +547,15 @@
             React.useEffect(() => { if (history && history.length > 0) setCode(history[0]); }, [history]);
             return (
                 <div className="min-h-screen flex flex-col items-center justify-center p-6">
-                    <div className="bg-white/80 backdrop-blur-xl p-8 rounded-3xl shadow-xl border border-white/50 w-full max-w-sm text-center">
-                        <div className="text-5xl text-teal-500 mb-4"><i className="fa-solid fa-wallet"></i></div>
-                        <h1 className="text-2xl font-bold text-gray-800 mb-1 tracking-wide">旅行記帳</h1>
-                        <p className="text-gray-400 text-sm mb-8">紀錄每一筆美好的回憶</p>
+                    <div className="bg-white/80 backdrop-blur-md p-8 rounded-2xl shadow-sm border border-stone-100 w-full max-w-sm text-center">
+                        <div className="text-5xl text-sage-400 mb-4"><i className="fa-solid fa-wallet"></i></div>
+                        <h1 className="text-2xl font-bold text-stone-700 mb-1 tracking-wide">旅行記帳</h1>
+                        <p className="text-stone-400 text-sm mb-8">紀錄每一筆美好的回憶</p>
                         
                         <div className="text-left mb-5">
                             <label className="input-label ml-1">旅程代號</label>
-                            <input value={code} onChange={e => setCode(e.target.value)} className="input-field uppercase text-center font-bold tracking-widest text-teal-700 text-lg" placeholder="例如 JAPAN" />
-                            {history.length > 0 && <div className="mt-3 flex flex-wrap gap-2 justify-center">{history.map(h => <button key={h} onClick={() => setCode(h)} className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${code === h ? 'bg-teal-50 border-teal-200 text-teal-700 font-bold' : 'bg-white border-gray-100 text-gray-500 hover:bg-gray-50'}`}>{h}</button>)}</div>}
+                            <input value={code} onChange={e => setCode(e.target.value)} className="input-field uppercase text-center font-bold tracking-widest text-sage-700 text-lg" placeholder="例如 JAPAN" />
+                            {history.length > 0 && <div className="mt-3 flex flex-wrap gap-2 justify-center">{history.map(h => <button key={h} onClick={() => setCode(h)} className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${code === h ? 'bg-sage-50 border-sage-200 text-sage-700 font-bold' : 'bg-white border-stone-200 text-stone-500 hover:bg-stone-50'}`}>{h}</button>)}</div>}
                         </div>
                         <div className="text-left mb-8 relative">
                             <label className="input-label ml-1">Gemini API Key</label>
@@ -508,15 +564,15 @@
                                 {key && (
                                     <button 
                                         onClick={() => setKey('')}
-                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-teal-600"
+                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-stone-400 hover:text-sage-600"
                                     >
                                         <i className="fa-solid fa-circle-xmark"></i>
                                     </button>
                                 )}
                             </div>
-                            {defaultKey && <p className="text-xs text-teal-600 mt-1.5 ml-1 flex items-center"><i className="fa-solid fa-check-circle mr-1"></i> 已自動載入</p>}
+                            {defaultKey && <p className="text-xs text-sage-600 mt-1.5 ml-1 flex items-center"><i className="fa-solid fa-check-circle mr-1"></i> 已自動載入</p>}
                         </div>
-                        <button onClick={() => onLogin(code, key)} className="btn-primary text-lg shadow-lg shadow-teal-200/50">開始記帳</button>
+                        <button onClick={() => onLogin(code, key)} className="btn-primary text-lg shadow-sm">開始記帳</button>
                     </div>
                 </div>
             );
@@ -537,26 +593,26 @@
             }, [expenses]);
 
             return (
-                <div className="header-glass text-white p-5 pb-4 min-h-[90px] flex flex-col justify-between rounded-b-[2rem] mx-[-1px] mb-[-20px] pb-8 z-0">
+                <div className="header-solid text-white p-5 pb-4 min-h-[90px] flex flex-col justify-between rounded-b-[1.5rem] mx-[-1px] mb-[-20px] pb-8 z-0">
                     <div className="flex justify-between items-start mb-2">
                         <div>
-                            <span className="text-teal-50 text-xs uppercase tracking-wider block font-medium opacity-80">Project</span>
+                            <span className="text-sage-50 text-xs uppercase tracking-wider block font-medium opacity-90">Project</span>
                             <h2 className="font-bold text-xl leading-tight tracking-wide">{tripId}</h2>
                         </div>
                         <div className="flex gap-1 bg-white/10 rounded-full p-1 backdrop-blur-sm">
                             <button onClick={onStats} className="w-9 h-9 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors" title="統計"><i className="fa-solid fa-chart-pie text-lg"></i></button>
-                            <button onClick={onAnalysis} className="w-9 h-9 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors" title="分析"><i className="fa-solid fa-wand-magic-sparkles text-lg text-yellow-200"></i></button>
+                            <button onClick={onAnalysis} className="w-9 h-9 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors" title="分析"><i className="fa-solid fa-wand-magic-sparkles text-lg text-yellow-100"></i></button>
                             <button onClick={onLogout} className="w-9 h-9 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors" title="登出"><i className="fa-solid fa-arrow-right-from-bracket text-lg"></i></button>
                         </div>
                     </div>
                     <div className="overflow-x-auto no-scrollbar">
-                        <div className="text-xs text-teal-50 mb-1 font-medium opacity-90">{filterCategory === 'All' ? '總花費' : `${filterCategory} 小計`}</div>
+                        <div className="text-xs text-sage-50 mb-1 font-medium opacity-90">{filterCategory === 'All' ? '總花費' : `${filterCategory} 小計`}</div>
                         <div className="flex gap-5">
                             {Object.keys(totals).length === 0 ? <span className="text-2xl font-bold">NT$ 0</span> : Object.entries(totals).map(([curr, val]) => (
                                 <div key={curr} className="flex-shrink-0">
                                     <div className="flex items-baseline gap-2">
                                         <span className="text-3xl font-bold tracking-tight">{curr} {Number(val.amt).toLocaleString()}</span>
-                                        {curr !== 'TWD' && <span className="text-sm text-teal-50 opacity-90">≈ NT$ {Number(val.twd).toLocaleString()}</span>}
+                                        {curr !== 'TWD' && <span className="text-sm text-sage-50 opacity-90">≈ NT$ {Number(val.twd).toLocaleString()}</span>}
                                     </div>
                                 </div>
                             ))}
@@ -570,13 +626,13 @@
         const ApiKeyRescueModal = ({ onSave, onCancel }) => {
             const [newKey, setNewKey] = React.useState('');
             return (
-                <div className="fixed inset-0 bg-black/50 z-[1000] flex items-center justify-center p-4 fade-in">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xs p-6 text-center">
-                        <div className="w-12 h-12 rounded-full bg-red-100 text-red-500 flex items-center justify-center mx-auto mb-3">
+                <div className="fixed inset-0 bg-stone-800/40 z-[1000] flex items-center justify-center p-4 fade-in">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-xs p-6 text-center border border-stone-100">
+                        <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto mb-3">
                             <i className="fa-solid fa-key text-xl"></i>
                         </div>
-                        <h3 className="font-bold text-lg mb-2 text-gray-800">API Key 無效</h3>
-                        <p className="text-gray-500 text-sm mb-4">您的 AI 金鑰似乎有問題。請輸入新的 Key 以繼續。</p>
+                        <h3 className="font-bold text-lg mb-2 text-stone-800">API Key 無效</h3>
+                        <p className="text-stone-500 text-sm mb-4">您的 AI 金鑰似乎有問題。請輸入新的 Key 以繼續。</p>
                         <input 
                             value={newKey}
                             onChange={(e) => setNewKey(e.target.value)}
@@ -588,7 +644,7 @@
                             <button onClick={onCancel} className="btn-secondary flex-1 py-2 text-sm">取消</button>
                             <button 
                                 onClick={() => { if(newKey.trim()) onSave(newKey.trim()); }} 
-                                className="btn-primary flex-1 py-2 text-sm bg-teal-500 hover:bg-teal-600"
+                                className="btn-primary flex-1 py-2 text-sm bg-sage-400 hover:bg-sage-500"
                             >
                                 更新並重試
                             </button>
@@ -608,33 +664,33 @@
             const saveEdit = (oldName) => { if (editValue.trim() && editValue !== oldName) { onEdit(oldName, editValue.trim()); } setEditingIndex(-1); };
 
             return (
-                <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 fade-in">
-                    <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-sm flex flex-col max-h-[80vh] border border-white/50">
-                        <div className="p-5 border-b border-gray-100 flex justify-between items-center">
-                            <h3 className="font-bold text-gray-800 text-lg">分類管理</h3>
-                            <button onClick={onClose}><i className="fa-solid fa-xmark text-xl text-gray-400 hover:text-gray-600"></i></button>
+                <div className="fixed inset-0 bg-stone-800/40 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 fade-in">
+                    <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl w-full max-w-sm flex flex-col max-h-[80vh] border border-stone-100">
+                        <div className="p-5 border-b border-stone-100 flex justify-between items-center">
+                            <h3 className="font-bold text-stone-700 text-lg">分類管理</h3>
+                            <button onClick={onClose}><i className="fa-solid fa-xmark text-xl text-stone-400 hover:text-stone-600"></i></button>
                         </div>
                         <div className="p-4 overflow-y-auto flex-1 space-y-2">
                             {categories.map((cat, idx) => (
-                                <div key={idx} className="flex justify-between items-center p-3 border border-gray-100 rounded-xl bg-white/50 hover:bg-white hover:shadow-sm transition-all">
+                                <div key={idx} className="flex justify-between items-center p-3 border border-stone-100 rounded-xl bg-stone-50 hover:bg-white hover:shadow-sm transition-all">
                                     {editingIndex === idx ? (
                                         <div className="flex-1 flex gap-2 mr-2">
-                                            <input value={editValue} onChange={e => setEditValue(e.target.value)} className="border rounded-lg px-2 py-1 w-full text-sm outline-none focus:border-teal-500" autoFocus />
-                                            <button onClick={() => saveEdit(cat)} className="text-teal-600 w-8 h-8 flex items-center justify-center bg-teal-50 rounded-lg"><i className="fa-solid fa-check"></i></button>
+                                            <input value={editValue} onChange={e => setEditValue(e.target.value)} className="border rounded-lg px-2 py-1 w-full text-sm outline-none focus:border-sage-400" autoFocus />
+                                            <button onClick={() => saveEdit(cat)} className="text-sage-600 w-8 h-8 flex items-center justify-center bg-sage-50 rounded-lg"><i className="fa-solid fa-check"></i></button>
                                         </div>
-                                    ) : <span className="flex-1 text-gray-700 font-medium pl-1">{cat}</span>}
+                                    ) : <span className="flex-1 text-stone-600 font-medium pl-1">{cat}</span>}
                                     {editingIndex !== idx && (
-                                        <div className="flex gap-2 text-gray-400">
-                                            <button onClick={() => startEdit(idx, cat)} className="w-8 h-8 rounded-lg hover:bg-teal-50 hover:text-teal-500 transition-colors"><i className="fa-solid fa-pen"></i></button>
+                                        <div className="flex gap-2 text-stone-400">
+                                            <button onClick={() => startEdit(idx, cat)} className="w-8 h-8 rounded-lg hover:bg-sage-50 hover:text-sage-500 transition-colors"><i className="fa-solid fa-pen"></i></button>
                                             <button onClick={() => onDelete(cat)} className="w-8 h-8 rounded-lg hover:bg-red-50 hover:text-red-500 transition-colors"><i className="fa-solid fa-trash"></i></button>
                                         </div>
                                     )}
                                 </div>
                             ))}
                         </div>
-                        <div className="p-4 border-t border-gray-100 flex gap-2">
-                            <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="新增分類名稱" className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-teal-500 focus:bg-white bg-gray-50 transition-colors" />
-                            <button onClick={handleAdd} className="bg-teal-500 text-white w-10 rounded-xl hover:bg-teal-600 shadow-md shadow-teal-100"><i className="fa-solid fa-plus"></i></button>
+                        <div className="p-4 border-t border-stone-100 flex gap-2">
+                            <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="新增分類名稱" className="flex-1 border border-stone-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-sage-400 focus:bg-white bg-stone-50 transition-colors" />
+                            <button onClick={handleAdd} className="bg-sage-400 text-white w-10 rounded-lg hover:bg-sage-500 shadow-sm"><i className="fa-solid fa-plus"></i></button>
                         </div>
                     </div>
                 </div>
@@ -676,16 +732,16 @@
             };
 
             return (
-                <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 fade-in">
-                    <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col border border-white/50">
-                        <div className="p-5 border-b border-gray-100 flex justify-between items-center">
-                            <h3 className="font-bold text-gray-800 text-lg"><i className="fa-solid fa-calculator mr-2 text-teal-500"></i>消費計算機</h3>
-                            <button onClick={onClose}><i className="fa-solid fa-xmark text-lg text-gray-400 hover:text-gray-600"></i></button>
+                <div className="fixed inset-0 bg-stone-800/40 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 fade-in">
+                    <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col border border-stone-100">
+                        <div className="p-5 border-b border-stone-100 flex justify-between items-center">
+                            <h3 className="font-bold text-stone-700 text-lg"><i className="fa-solid fa-calculator mr-2 text-sage-400"></i>消費計算機</h3>
+                            <button onClick={onClose}><i className="fa-solid fa-xmark text-lg text-stone-400 hover:text-stone-600"></i></button>
                         </div>
                         <div className="p-5 overflow-y-auto flex-1">
-                            {stats.length === 0 ? <p className="text-center text-gray-400 py-4">無資料</p> : (
+                            {stats.length === 0 ? <p className="text-center text-stone-400 py-4">無資料</p> : (
                                 <div className="space-y-6">
-                                    <p className="text-xs text-gray-400 mb-2 text-center bg-gray-50 rounded-full py-1 mx-10">勾選以計算合計金額</p>
+                                    <p className="text-xs text-stone-400 mb-2 text-center bg-stone-50 rounded-full py-1 mx-10">勾選以計算合計金額</p>
                                     {stats.map((item, idx) => {
                                         const isExcluded = excludedCats.has(item.cat);
                                         return (
@@ -693,19 +749,19 @@
                                                 <div className="flex items-center justify-between mb-2">
                                                     <div className="flex items-center gap-3">
                                                         <input type="checkbox" className="custom-checkbox" checked={!isExcluded} onChange={() => toggleCategory(item.cat)} />
-                                                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: `hsl(${170 + idx * 25}, 75%, 45%)` }}></div><span className="font-bold text-gray-700">{item.cat}</span></div>
+                                                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: `hsl(${100 + idx * 15}, 20%, 55%)` }}></div><span className="font-bold text-stone-600">{item.cat}</span></div>
                                                     </div>
-                                                    <div className="text-right"><span className="font-bold text-gray-800 mr-2">{formatMoney(item.totalTWD)}</span><span className="text-xs text-gray-500">({item.percent.toFixed(1)}%)</span></div>
+                                                    <div className="text-right"><span className="font-bold text-stone-700 mr-2">{formatMoney(item.totalTWD)}</span><span className="text-xs text-stone-400">({item.percent.toFixed(1)}%)</span></div>
                                                 </div>
-                                                <div className="stat-bar-bg mb-3 ml-8 w-auto h-2"><div className="stat-bar-fill h-full" style={{ width: `${item.percent}%`, backgroundColor: `hsl(${170 + idx * 25}, 75%, 45%)` }}></div></div>
-                                                <div className="pl-8 space-y-1">{item.currencies.map((c, cIdx) => (<div key={cIdx} className="flex justify-between text-xs text-gray-500 font-mono"><span>{c.curr} {Number(c.amount).toLocaleString()}</span>{c.curr !== 'TWD' && <span>≈ NT$ {Number(c.twd).toLocaleString()}</span>}</div>))}</div>
+                                                <div className="stat-bar-bg mb-3 ml-8 w-auto h-1.5"><div className="stat-bar-fill h-full" style={{ width: `${item.percent}%`, backgroundColor: `hsl(${100 + idx * 15}, 20%, 55%)` }}></div></div>
+                                                <div className="pl-8 space-y-1">{item.currencies.map((c, cIdx) => (<div key={cIdx} className="flex justify-between text-xs text-stone-500 font-mono"><span>{c.curr} {Number(c.amount).toLocaleString()}</span>{c.curr !== 'TWD' && <span>≈ {formatMoney(c.twd)}</span>}</div>))}</div>
                                             </div>
                                         );
                                     })}
                                 </div>
                             )}
                         </div>
-                        <div className="p-5 border-t border-gray-100 bg-teal-50/50 rounded-b-3xl"><div className="flex justify-between items-center"><span className="text-teal-800 font-bold">合計金額 (已選)</span><span className="text-2xl font-bold text-teal-600">{formatMoney(selectedTotal)}</span></div></div>
+                        <div className="p-5 border-t border-stone-100 bg-stone-50/50 rounded-b-2xl"><div className="flex justify-between items-center"><span className="text-stone-600 font-bold">合計金額 (已選)</span><span className="text-2xl font-bold text-sage-600">{formatMoney(selectedTotal)}</span></div></div>
                     </div>
                 </div>
             );
@@ -730,36 +786,36 @@
                 analyze();
             }, []);
             return (
-                <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 fade-in">
-                    <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col border border-white/50">
-                        <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-teal-500 text-white rounded-t-3xl shadow-sm"><h3 className="font-bold text-lg"><i className="fa-solid fa-chart-line mr-2"></i>AI 記帳分析</h3><button onClick={onClose}><i className="fa-solid fa-xmark text-xl text-teal-100 hover:text-white"></i></button></div>
-                        <div className="p-6 overflow-y-auto">{loading ? <div className="text-center py-8"><div className="loader mx-auto mb-4"></div><p className="text-gray-500">AI 分析中...</p></div> : <div className="prose prose-sm text-gray-700 whitespace-pre-wrap leading-relaxed markdown-content">{analysis}</div>}</div>
-                        <div className="p-4 border-t border-gray-100 bg-white rounded-b-3xl text-center"><button onClick={onClose} className="btn-primary py-2 text-sm shadow-md">關閉</button></div>
+                <div className="fixed inset-0 bg-stone-800/40 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 fade-in">
+                    <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col border border-stone-100">
+                        <div className="p-5 border-b border-stone-100 flex justify-between items-center bg-sage-400 text-white rounded-t-2xl shadow-sm"><h3 className="font-bold text-lg"><i className="fa-solid fa-chart-line mr-2"></i>AI 記帳分析</h3><button onClick={onClose}><i className="fa-solid fa-xmark text-xl text-sage-50 hover:text-white"></i></button></div>
+                        <div className="p-6 overflow-y-auto">{loading ? <div className="text-center py-8"><div className="loader mx-auto mb-4"></div><p className="text-stone-500">AI 分析中...</p></div> : <div className="prose prose-sm text-stone-600 whitespace-pre-wrap leading-relaxed markdown-content">{analysis}</div>}</div>
+                        <div className="p-4 border-t border-stone-100 bg-white rounded-b-2xl text-center"><button onClick={onClose} className="btn-primary py-2 text-sm shadow-sm">關閉</button></div>
                     </div>
                 </div>
             );
         };
 
         const ExpenseList = ({ expenses, onEdit, onDelete }) => {
-            if (expenses.length === 0) return <div className="text-center py-20 text-gray-400/50"><i className="fa-regular fa-clipboard text-5xl mb-4 text-teal-100"></i><p>無記帳紀錄</p></div>;
+            if (expenses.length === 0) return <div className="text-center py-20 text-stone-300"><i className="fa-regular fa-clipboard text-5xl mb-4"></i><p>無記帳紀錄</p></div>;
             return (
                 <div className="space-y-3 pb-24">
                     {expenses.map(item => (
                         <div key={item.id} onClick={() => onEdit(item)} className="card-soft flex justify-between items-center active:scale-[0.98] transition-transform p-4 cursor-pointer">
                             <div className="flex-1 min-w-0 pr-3">
                                 <div className="mb-2">
-                                    <span className="bg-teal-50 text-teal-700 px-2 py-0.5 rounded-lg text-[10px] font-bold border border-teal-100 inline-block mb-1 tracking-wide">{item.category}</span>
-                                    <div className="font-bold text-gray-700 text-base leading-snug break-words">{item.item || "未命名"}</div>
+                                    <span className="bg-stone-100 text-stone-600 px-2 py-0.5 rounded-md text-[10px] font-bold inline-block mb-1 tracking-wide uppercase">{item.category}</span>
+                                    <div className="font-bold text-stone-700 text-base leading-snug break-words">{item.item || "未命名"}</div>
                                 </div>
                                 <div className="flex flex-col">
                                     <div className="flex items-baseline gap-2">
-                                        <span className="font-extrabold text-gray-800 text-xl tracking-tight">{item.currency !== 'TWD' ? `${item.currency} ${Number(item.foreignAmount).toLocaleString()}` : formatMoney(item.twdAmount)}</span>
-                                        {item.currency !== 'TWD' && <span className="text-xs text-gray-400 font-medium">≈ NT$ {Number(item.twdAmount).toLocaleString()}</span>}
+                                        <span className="font-bold text-stone-800 text-xl tracking-tight">{item.currency !== 'TWD' ? `${item.currency} ${Number(item.foreignAmount).toLocaleString()}` : formatMoney(item.twdAmount)}</span>
+                                        {item.currency !== 'TWD' && <span className="text-xs text-stone-400 font-medium">≈ NT$ {Number(item.twdAmount).toLocaleString()}</span>}
                                     </div>
-                                    <div className="text-[10px] text-gray-400 mt-1 font-medium">{formatDateTime(item.createdAt?.seconds)}</div>
+                                    <div className="text-[10px] text-stone-400 mt-1 font-medium">{formatDateTime(item.createdAt?.seconds)}</div>
                                 </div>
                             </div>
-                            <button onClick={(e) => { e.stopPropagation(); onDelete(item.id); }} className="w-10 h-10 rounded-full flex items-center justify-center text-gray-300 hover:bg-red-50 hover:text-red-500 transition-colors flex-shrink-0"><i className="fa-solid fa-trash"></i></button>
+                            <button onClick={(e) => { e.stopPropagation(); onDelete(item.id); }} className="w-10 h-10 rounded-full flex items-center justify-center text-stone-300 hover:bg-red-50 hover:text-red-500 transition-colors flex-shrink-0"><i className="fa-solid fa-trash"></i></button>
                         </div>
                     ))}
                 </div>
@@ -941,7 +997,6 @@
                 }
             };
             
-            // Toggle Logic for Select All Button
             const isAllSelected = scannedItems.length > 0 && selectedIndices.size === scannedItems.length;
             const toggleSelectAll = () => {
                 if (isAllSelected) {
@@ -954,9 +1009,9 @@
             return (
                 <div className="card-soft p-5 pb-8 mb-4">
                     {showRescueModal && <ApiKeyRescueModal onSave={handleRescueKey} onCancel={() => setShowRescueModal(false)} />}
-                    <h2 className="text-lg font-bold text-gray-800 mb-5 flex justify-between items-center">
-                        <span className="flex items-center"><i className={`fa-solid ${initialData ? 'fa-pen-to-square' : 'fa-plus-circle'} text-teal-500 mr-2`}></i>{initialData ? '修改花費' : '新增花費'}</span>
-                        <button type="button" onClick={() => fileRef.current.click()} disabled={loading} className="text-sm bg-teal-50 text-teal-600 px-3 py-1.5 rounded-lg flex items-center gap-2 hover:bg-teal-100 transition-colors font-medium">
+                    <h2 className="text-lg font-bold text-stone-700 mb-5 flex justify-between items-center">
+                        <span className="flex items-center"><i className={`fa-solid ${initialData ? 'fa-pen-to-square' : 'fa-plus-circle'} text-sage-400 mr-2`}></i>{initialData ? '修改花費' : '新增花費'}</span>
+                        <button type="button" onClick={() => fileRef.current.click()} disabled={loading} className="text-sm bg-sage-50 text-sage-600 px-3 py-1.5 rounded-lg flex items-center gap-2 hover:bg-sage-100 transition-colors font-medium border border-sage-100">
                             {loading ? <div className="loader"></div> : <i className="fa-solid fa-camera"></i>}
                             <span>{loading ? '讀取中' : '拍收據'}</span>
                         </button>
@@ -965,21 +1020,20 @@
 
                     {scannedItems.length > 0 ? (
                         <div className="mb-6 animate-fade-in">
-                            <div className="bg-teal-50/50 p-4 rounded-xl mb-4 border border-teal-100">
-                                <h3 className="font-bold text-teal-800 mb-3 text-sm"><i className="fa-solid fa-gear mr-1"></i> 全域設定</h3>
+                            <div className="bg-sage-50/50 p-4 rounded-xl mb-4 border border-sage-100">
+                                <h3 className="font-bold text-sage-700 mb-3 text-sm"><i className="fa-solid fa-gear mr-1"></i> 全域設定</h3>
                                 <div className="grid grid-cols-3 gap-3">
                                     <div><label className="input-label text-xs">幣別</label><select value={scanSettings.currency} onChange={e => setScanSettings({...scanSettings, currency: e.target.value})} className="input-field input-sm bg-white">{currencies.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
                                     {scanSettings.currency !== 'TWD' && (<div><label className="input-label text-xs">匯率</label><input type="number" inputMode="decimal" value={scanSettings.exchangeRate} onChange={e => setScanSettings({...scanSettings, exchangeRate: e.target.value})} className="input-field input-sm" /></div>)}
                                 </div>
                             </div>
                             
-                            {/* Optimized Select All Button */}
                             <div className="flex justify-between items-center mb-3">
-                                <span className="text-sm text-gray-500 font-medium">確認明細 ({selectedIndices.size}/{scannedItems.length})</span>
+                                <span className="text-sm text-stone-500 font-medium">確認明細 ({selectedIndices.size}/{scannedItems.length})</span>
                                 <button 
                                     type="button" 
                                     onClick={toggleSelectAll} 
-                                    className={`text-xs px-3 py-1.5 rounded-full font-bold transition-all shadow-sm ${isAllSelected ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-teal-50 text-teal-600 border border-teal-100'}`}
+                                    className={`text-xs px-3 py-1.5 rounded-full font-bold transition-all shadow-sm ${isAllSelected ? 'bg-red-50 text-red-500 border border-red-100' : 'bg-sage-50 text-sage-600 border border-sage-100'}`}
                                 >
                                     {isAllSelected ? '取消全選' : '全選'}
                                 </button>
@@ -987,27 +1041,27 @@
                             
                             <div className="space-y-3 max-h-[60vh] overflow-y-auto pb-2">
                                 {scannedItems.map((item, idx) => (
-                                    <div key={idx} className={`border rounded-xl p-3 transition-colors ${selectedIndices.has(idx) ? 'bg-white border-teal-200 shadow-sm' : 'bg-gray-50 border-gray-100 opacity-60'}`}>
+                                    <div key={idx} className={`border rounded-xl p-3 transition-colors ${selectedIndices.has(idx) ? 'bg-white border-sage-300 shadow-sm' : 'bg-stone-50 border-stone-200 opacity-60'}`}>
                                         <div className="flex gap-3">
                                             <div className="pt-2">
                                                 <input type="checkbox" className="custom-checkbox flex-shrink-0" checked={selectedIndices.has(idx)} onChange={() => { const newSet = new Set(selectedIndices); if (newSet.has(idx)) newSet.delete(idx); else newSet.add(idx); setSelectedIndices(newSet); }} />
                                             </div>
                                             <div className="flex-1 min-w-0 flex flex-col gap-2">
-                                                <input value={item.name} onChange={(e) => updateScannedItem(idx, 'name', e.target.value)} className="border-b border-dashed border-gray-300 w-full text-sm bg-transparent font-medium focus:border-teal-500 focus:outline-none py-1" placeholder="品名" />
+                                                <input value={item.name} onChange={(e) => updateScannedItem(idx, 'name', e.target.value)} className="border-b border-dashed border-stone-300 w-full text-sm bg-transparent font-medium focus:border-sage-400 focus:outline-none py-1 text-stone-700" placeholder="品名" />
                                                 <div className="flex items-center justify-between gap-2">
-                                                    <select value={item.category} onChange={(e) => updateScannedItem(idx, 'category', e.target.value)} className="text-xs text-gray-500 bg-transparent border-none p-0 focus:ring-0 w-24">{categories.map(c => <option key={c} value={c}>{c}</option>)}</select>
+                                                    <select value={item.category} onChange={(e) => updateScannedItem(idx, 'category', e.target.value)} className="text-xs text-stone-500 bg-transparent border-none p-0 focus:ring-0 w-24">{categories.map(c => <option key={c} value={c}>{c}</option>)}</select>
                                                     <div className="flex items-center gap-1 justify-end flex-1">
-                                                        <span className="text-xs text-gray-400 whitespace-nowrap">{scanSettings.currency}</span>
-                                                        <input type="number" value={item.amount} onChange={(e) => updateScannedItem(idx, 'amount', e.target.value)} className="border-b border-dashed border-gray-300 w-24 text-sm font-mono bg-transparent text-right focus:border-teal-500 focus:outline-none font-bold text-gray-800" />
+                                                        <span className="text-xs text-stone-400 whitespace-nowrap">{scanSettings.currency}</span>
+                                                        <input type="number" value={item.amount} onChange={(e) => updateScannedItem(idx, 'amount', e.target.value)} className="border-b border-dashed border-stone-300 w-24 text-sm font-mono bg-transparent text-right focus:border-sage-400 focus:outline-none font-bold text-stone-700" />
                                                     </div>
                                                 </div>
-                                                {scanSettings.currency !== 'TWD' && <div className="text-right text-xs text-teal-600 font-medium">≈ NT$ {Number(Math.round(item.amount * scanSettings.exchangeRate)).toLocaleString()}</div>}
+                                                {scanSettings.currency !== 'TWD' && <div className="text-right text-xs text-sage-600 font-medium">≈ NT$ {Number(Math.round(item.amount * scanSettings.exchangeRate)).toLocaleString()}</div>}
                                             </div>
                                         </div>
                                     </div>
                                 ))}
                             </div>
-                            <div className="mt-4 pt-4 border-t border-gray-100 flex gap-3"><button type="button" onClick={() => setScannedItems([])} className="flex-1 py-3 rounded-lg border border-gray-300 text-gray-600 font-medium text-sm">取消</button><button type="button" onClick={confirmBatchSave} className="flex-[2] py-3 rounded-lg bg-teal-500 text-white font-bold text-sm shadow-md hover:bg-teal-600 transition-colors">儲存選取項目</button></div>
+                            <div className="mt-4 pt-4 border-t border-stone-100 flex gap-3"><button type="button" onClick={() => setScannedItems([])} className="flex-1 py-3 rounded-lg border border-stone-200 text-stone-600 font-medium text-sm hover:bg-stone-50">取消</button><button type="button" onClick={confirmBatchSave} className="flex-[2] py-3 rounded-lg bg-sage-400 text-white font-bold text-sm shadow-md hover:bg-sage-500 transition-colors">儲存選取項目</button></div>
                         </div>
                     ) : (
                         <div className="space-y-5">
@@ -1015,16 +1069,16 @@
                                 <label className="input-label ml-1">分類</label>
                                 <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 items-center">
                                     {categories.map(c => (
-                                        <button type="button" key={c} onClick={() => setForm({...form, category: c})} className={`px-4 py-2 rounded-xl text-sm whitespace-nowrap border transition-all ${form.category === c ? 'bg-teal-500 text-white border-teal-500 shadow-md transform scale-105' : 'bg-white text-gray-500 border-gray-200'}`}>{c}</button>
+                                        <button type="button" key={c} onClick={() => setForm({...form, category: c})} className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap border transition-all ${form.category === c ? 'bg-sage-400 text-white border-sage-400 shadow-sm transform scale-105' : 'bg-white text-stone-500 border-stone-200 hover:bg-stone-50'}`}>{c}</button>
                                     ))}
                                     {isAddingCat ? (
                                         <div className="flex items-center gap-1">
-                                            <input autoFocus value={newCatName} onChange={(e) => setNewCatName(e.target.value)} className="px-3 py-1.5 rounded-lg text-sm border border-teal-400 w-24 outline-none shadow-sm" placeholder="名稱" onKeyDown={(e) => { if(e.key === 'Enter') handleConfirmAddCategory(); }} />
-                                            <button type="button" onClick={handleConfirmAddCategory} className="w-8 h-8 rounded-full bg-teal-500 text-white flex items-center justify-center shadow-sm"><i className="fa-solid fa-check"></i></button>
-                                            <button type="button" onClick={() => setIsAddingCat(false)} className="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center"><i className="fa-solid fa-xmark"></i></button>
+                                            <input autoFocus value={newCatName} onChange={(e) => setNewCatName(e.target.value)} className="px-3 py-1.5 rounded-lg text-sm border border-sage-300 w-24 outline-none shadow-sm" placeholder="名稱" onKeyDown={(e) => { if(e.key === 'Enter') handleConfirmAddCategory(); }} />
+                                            <button type="button" onClick={handleConfirmAddCategory} className="w-8 h-8 rounded-full bg-sage-400 text-white flex items-center justify-center shadow-sm"><i className="fa-solid fa-check"></i></button>
+                                            <button type="button" onClick={() => setIsAddingCat(false)} className="w-8 h-8 rounded-full bg-stone-200 text-stone-500 flex items-center justify-center"><i className="fa-solid fa-xmark"></i></button>
                                         </div>
                                     ) : (
-                                        <button type="button" onClick={() => setIsAddingCat(true)} className="px-3 py-2 rounded-xl text-sm whitespace-nowrap border border-dashed border-gray-400 text-gray-500 hover:bg-gray-50 hover:border-teal-400 hover:text-teal-500 transition-colors"><i className="fa-solid fa-plus"></i></button>
+                                        <button type="button" onClick={() => setIsAddingCat(true)} className="px-3 py-2 rounded-lg text-sm whitespace-nowrap border border-dashed border-stone-300 text-stone-400 hover:bg-stone-50 hover:border-sage-300 hover:text-sage-500 transition-colors"><i className="fa-solid fa-plus"></i></button>
                                     )}
                                 </div>
                             </div>
@@ -1032,7 +1086,7 @@
                                 <label className="input-label ml-1">品名</label>
                                 <div className="flex gap-2">
                                     <input value={form.item} onChange={e => setForm({...form, item: e.target.value})} className="input-field" placeholder="例如：便利商店" />
-                                    <button type="button" onClick={handleSmartClassify} disabled={classifying || !form.item} className="bg-yellow-50 text-yellow-600 border border-yellow-200 px-3.5 rounded-xl flex items-center justify-center hover:bg-yellow-100 disabled:opacity-50 transition-colors shadow-sm" title="智慧分類">{classifying ? <div className="loader w-4 h-4 border-yellow-600 border-t-transparent"></div> : <i className="fa-solid fa-wand-magic-sparkles"></i>}</button>
+                                    <button type="button" onClick={handleSmartClassify} disabled={classifying || !form.item} className="bg-yellow-50 text-yellow-600 border border-yellow-200 px-3.5 rounded-lg flex items-center justify-center hover:bg-yellow-100 disabled:opacity-50 transition-colors shadow-sm" title="智慧分類">{classifying ? <div className="loader w-4 h-4 border-yellow-600 border-t-transparent"></div> : <i className="fa-solid fa-wand-magic-sparkles"></i>}</button>
                                 </div>
                             </div>
                             <div className="grid grid-cols-3 gap-3">
@@ -1040,12 +1094,12 @@
                                 <div className="col-span-2"><label className="input-label ml-1">金額</label><input type="number" inputMode="decimal" value={form.foreignAmount} onChange={e => setForm({...form, foreignAmount: e.target.value})} className="input-field font-mono text-lg font-medium tracking-wide" placeholder="0.00" /></div>
                             </div>
                             {form.currency !== 'TWD' && (
-                                <div className="bg-teal-50/50 p-4 rounded-xl grid grid-cols-3 gap-3 border border-teal-100">
+                                <div className="bg-sage-50/50 p-4 rounded-xl grid grid-cols-3 gap-3 border border-sage-100">
                                     <div><label className="input-label text-xs">匯率</label><input type="number" inputMode="decimal" value={form.exchangeRate} onChange={e => setForm({...form, exchangeRate: e.target.value})} className="input-field text-sm p-2" /></div>
-                                    <div className="col-span-2"><label className="input-label text-xs text-teal-600">折合台幣</label><input value={form.twdAmount} readOnly className="input-field text-teal-600 font-bold bg-transparent border-none p-2 text-lg" /></div>
+                                    <div className="col-span-2"><label className="input-label text-xs text-sage-600">折合台幣</label><input value={form.twdAmount} readOnly className="input-field text-sage-600 font-bold bg-transparent border-none p-2 text-lg" /></div>
                                 </div>
                             )}
-                            <div className="flex gap-3 mt-8 pt-4 border-t border-gray-100"><button type="button" onClick={onCancel} className="btn-secondary">取消</button><button type="button" onClick={() => onSave(form)} className="btn-primary shadow-lg shadow-teal-200/50"><i className="fa-solid fa-check mr-2"></i>確認儲存</button></div>
+                            <div className="flex gap-3 mt-8 pt-4 border-t border-stone-100"><button type="button" onClick={onCancel} className="btn-secondary">取消</button><button type="button" onClick={() => onSave(form)} className="btn-primary shadow-lg shadow-sage-200/50"><i className="fa-solid fa-check mr-2"></i>確認儲存</button></div>
                         </div>
                     )}
                 </div>
