@@ -3,56 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>旅行代購記帳神器 V3 (修復版)</title>
+    <title>基礎記帳 + AI 辨識版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- FontAwesome for Icons -->
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Firebase SDKs (Compat Version for file:// support) -->
-    <!-- 使用 Compat 版本以確保直接開啟檔案時也能運作 -->
+    <!-- Firebase SDKs (Compat Version) -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f3f4f6; }
-        .mobile-container { max-width: 600px; margin: 0 auto; min-height: 100vh; background: white; position: relative; padding-bottom: 80px; }
-        .card { background: white; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); padding: 16px; margin-bottom: 12px; }
-        .input-group { margin-bottom: 12px; }
-        .input-label { display: block; font-size: 0.85rem; color: #6b7280; margin-bottom: 4px; }
-        .input-field { width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 1rem; transition: border-color 0.2s; }
-        .input-field:focus { border-color: #3b82f6; outline: none; ring: 2px solid #bfdbfe; }
-        .btn-primary { background: #3b82f6; color: white; padding: 12px; border-radius: 8px; width: 100%; font-weight: 600; text-align: center; }
-        .btn-secondary { background: #e5e7eb; color: #374151; padding: 12px; border-radius: 8px; width: 100%; font-weight: 600; text-align: center; }
-        .loader { border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #3b82f6; width: 24px; height: 24px; -webkit-animation: spin 1s linear infinite; animation: spin 1s linear infinite; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f9fafb; }
+        .mobile-container { max-width: 600px; margin: 0 auto; min-height: 100vh; background: white; position: relative; padding-bottom: 90px; }
+        .input-label { display: block; font-size: 0.85rem; color: #4b5563; margin-bottom: 4px; font-weight: 500; }
+        .input-field { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1rem; transition: border-color 0.2s; -webkit-appearance: none; background: #fff; }
+        .input-field:focus { border-color: #2563eb; outline: none; ring: 2px solid #bfdbfe; }
+        .btn-primary { background: #2563eb; color: white; padding: 12px; border-radius: 8px; width: 100%; font-weight: 600; text-align: center; box-shadow: 0 2px 4px rgba(37,99,235,0.2); }
+        .btn-secondary { background: #f3f4f6; color: #4b5563; padding: 12px; border-radius: 8px; width: 100%; font-weight: 600; text-align: center; }
+        /* 隱藏捲軸但保留功能 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        /* 載入動畫 */
+        .loader { border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #2563eb; width: 20px; height: 20px; -webkit-animation: spin 1s linear infinite; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        /* Hide scrollbar for category selector */
-        .category-scroll::-webkit-scrollbar { display: none; }
-        .category-scroll { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        /* Error Box */
-        #error-display { display: none; padding: 20px; background: #fee2e2; color: #991b1b; position: fixed; top: 0; left: 0; width: 100%; z-index: 9999; }
     </style>
 </head>
 <body>
-    <div id="error-display"></div>
     <div id="root"></div>
 
-    <script>
-        // Global Error Handler
-        window.onerror = function(message, source, lineno, colno, error) {
-            const display = document.getElementById('error-display');
-            display.style.display = 'block';
-            display.innerHTML = `<strong>系統發生錯誤：</strong><br>${message}<br><small>Line: ${lineno}</small>`;
-        };
-    </script>
-
     <script type="text/babel">
-        // --- Configuration Section ---
-        
+        // --- 1. 設定區 ---
         const firebaseConfig = {
           apiKey: "AIzaSyCzJrM3jdvmRMvv_0ln7mrEoJzlpp0u-nw",
           authDomain: "travel-expense-1c058.firebaseapp.com",
@@ -62,424 +46,468 @@
           appId: "1:248802295771:web:2a49b4f9cbc0c27fda71fe",
           measurementId: "G-L01PRNHE28"
         };
-
+        
+        // 您的 Gemini API Key 預設值
         const DEFAULT_GEMINI_KEY = "AIzaSyC92ceFCXbcINuovR9U49y9i4eVNOCrj04";
 
-        // --- Firebase Initialization (Compat Mode) ---
+        // --- 2. 初始化 Firebase ---
         let app, auth, db;
         try {
-            if (!firebase.apps.length) {
-                app = firebase.initializeApp(firebaseConfig);
-            } else {
-                app = firebase.app();
-            }
+            if (!firebase.apps.length) app = firebase.initializeApp(firebaseConfig);
+            else app = firebase.app();
             auth = firebase.auth();
             db = firebase.firestore();
-            console.log("Firebase initialized successfully");
         } catch (e) {
-            console.error("Firebase init error:", e);
-            document.getElementById('error-display').style.display = 'block';
-            document.getElementById('error-display').innerHTML = "Firebase 連線失敗: " + e.message;
+            document.body.innerHTML = `<div style="padding:20px;color:red">Firebase Error: ${e.message}</div>`;
         }
 
-        const appId = firebaseConfig.projectId || 'travel-expense-v1';
-        const categories = ["飲食", "交通", "住宿", "購物", "門票", "其他", "代購"];
+        const appId = firebaseConfig.projectId;
+        const categories = ["飲食", "交通", "住宿", "購物", "門票", "其他"];
         const currencies = ["TWD", "JPY", "KRW", "USD", "EUR", "CNY", "THB", "VND"];
 
-        // Utility
-        const formatMoney = (amount, currency) => {
-            return new Intl.NumberFormat('zh-TW', { style: 'currency', currency: currency || 'TWD', minimumFractionDigits: 0 }).format(amount);
+        // --- 3. 輔助功能 ---
+        const formatMoney = (amount, currency = 'TWD') => {
+            return new Intl.NumberFormat('zh-TW', { 
+                style: 'currency', 
+                currency: currency, 
+                minimumFractionDigits: 0, 
+                maximumFractionDigits: 2 
+            }).format(amount);
         };
 
+        // --- 4. 主程式 ---
         const App = () => {
             const [user, setUser] = React.useState(null);
             const [view, setView] = React.useState('login'); 
             const [tripId, setTripId] = React.useState('');
+            // 加入 API Key 狀態管理
             const [apiKey, setApiKey] = React.useState(localStorage.getItem('gemini_api_key') || DEFAULT_GEMINI_KEY);
             const [expenses, setExpenses] = React.useState([]);
-            const [loginHistory, setLoginHistory] = React.useState([]);
             const [editItem, setEditItem] = React.useState(null);
 
-            // Auth & History Load
+            // 自動登入
             React.useEffect(() => {
-                const initAuth = async () => {
-                    try {
-                        await auth.signInAnonymously();
-                    } catch (error) { console.error("Auth failed", error); }
-                };
-                initAuth();
-                const unsubscribe = auth.onAuthStateChanged((u) => setUser(u));
-                
-                const savedHistory = JSON.parse(localStorage.getItem('trip_history') || '[]');
-                setLoginHistory(savedHistory);
-                
-                const savedKey = localStorage.getItem('gemini_api_key');
-                if (savedKey) setApiKey(savedKey);
-
-                return () => unsubscribe();
+                auth.signInAnonymously().catch(e => console.error("Auth:", e));
+                auth.onAuthStateChanged(u => setUser(u));
             }, []);
 
-            // Firestore Data Sync (Compat Syntax)
+            // 資料同步 (維持原本的資料路徑)
             React.useEffect(() => {
                 if (!user || !tripId) return;
-                
-                // Path: artifacts/{appId}/public/data/{tripId}_expenses
-                const collectionRef = db.collection('artifacts')
-                                        .doc(appId)
-                                        .collection('public')
-                                        .doc('data')
-                                        .collection(`${tripId}_expenses`);
-
-                const unsubscribe = collectionRef
-                    .orderBy('createdAt', 'desc')
-                    .onSnapshot((snapshot) => {
-                        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        setExpenses(data);
-                    }, (error) => {
-                        console.error("Error fetching data:", error);
-                        // If index error, we fallback to client side sorting (rare for simple queries)
-                    });
-                    
-                return () => unsubscribe();
+                const ref = db.collection('artifacts').doc(appId)
+                              .collection('public').doc('data')
+                              .collection(`${tripId}_simple_v1`);
+                              
+                const unsub = ref.orderBy('createdAt', 'desc').onSnapshot(snap => {
+                    const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    setExpenses(data);
+                });
+                return () => unsub();
             }, [user, tripId]);
 
-            // Handlers
+            // 處理登入
             const handleLogin = (code, key) => {
-                if (!code) return alert("請輸入旅程代號");
-                if (!key) return alert("請輸入 Gemini API Key");
+                if (!code.trim()) return alert("請輸入代號");
+                setTripId(code.toUpperCase());
                 
-                setTripId(code);
-                setApiKey(key);
-                localStorage.setItem('gemini_api_key', key);
-                
-                const newHistory = [code, ...loginHistory.filter(h => h !== code)].slice(0, 5);
-                setLoginHistory(newHistory);
-                localStorage.setItem('trip_history', JSON.stringify(newHistory));
+                // 儲存新的 Key (如果有改動)
+                if (key) {
+                    setApiKey(key);
+                    localStorage.setItem('gemini_api_key', key);
+                }
+
                 setView('list');
             };
 
-            const handleLogout = () => {
-                setTripId('');
-                setExpenses([]);
-                setView('login');
-            };
-
-            const handleDelete = async (id) => {
-                if (!confirm("確定要刪除這筆資料嗎？")) return;
+            // 處理儲存
+            const handleSave = async (data) => {
                 try {
-                    await db.collection('artifacts').doc(appId)
-                            .collection('public').doc('data')
-                            .collection(`${tripId}_expenses`).doc(id).delete();
-                } catch(e) {
-                    alert("刪除失敗: " + e.message);
-                }
-            };
-
-            const handleSaveItem = async (itemData) => {
-                try {
-                    const collectionRef = db.collection('artifacts').doc(appId)
-                                            .collection('public').doc('data')
-                                            .collection(`${tripId}_expenses`);
-                    
-                    if (itemData.id) {
-                        const { id, ...updateData } = itemData;
-                        await collectionRef.doc(id).update(updateData);
+                    const ref = db.collection('artifacts').doc(appId)
+                                  .collection('public').doc('data')
+                                  .collection(`${tripId}_simple_v1`);
+                    if (data.id) {
+                        const { id, ...updateData } = data;
+                        await ref.doc(id).update(updateData);
                     } else {
-                        await collectionRef.add({
-                            ...itemData,
-                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        await ref.add({ 
+                            ...data, 
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp() 
                         });
                     }
                     setView('list');
                     setEditItem(null);
                 } catch (e) {
                     alert("儲存失敗: " + e.message);
-                    console.error(e);
                 }
             };
 
+            const handleDelete = async (id) => {
+                if(!confirm("確定要刪除嗎？")) return;
+                await db.collection('artifacts').doc(appId)
+                        .collection('public').doc('data')
+                        .collection(`${tripId}_simple_v1`)
+                        .doc(id).delete();
+            };
+
+            const totalTWD = expenses.reduce((sum, item) => sum + Number(item.twdAmount || 0), 0);
+
             return (
                 <div className="mobile-container">
-                    {view === 'login' && <LoginView history={loginHistory} savedKey={apiKey} onLogin={handleLogin} />}
-                    {view !== 'login' && (
+                    {view === 'login' ? (
+                        <LoginView onLogin={handleLogin} defaultKey={apiKey} />
+                    ) : (
                         <>
-                            <Header tripId={tripId} currentView={view} onBack={() => { setView('list'); setEditItem(null); }} onLogout={handleLogout} />
+                            <Header tripId={tripId} total={totalTWD} onLogout={() => window.location.reload()} />
+                            
                             <div className="p-4">
-                                {view === 'list' && <ExpenseList expenses={expenses} onEdit={(item) => { setEditItem(item); setView('add'); }} onDelete={handleDelete} />}
-                                {view === 'add' && <AddEditForm apiKey={apiKey} initialData={editItem} onSave={handleSaveItem} onCancel={() => { setEditItem(null); setView('list'); }} />}
-                                {view === 'stats' && <StatsView expenses={expenses} />}
+                                {view === 'list' && (
+                                    <ExpenseList 
+                                        expenses={expenses} 
+                                        onEdit={(item) => { setEditItem(item); setView('add'); }}
+                                        onDelete={handleDelete}
+                                    />
+                                )}
+                                {view === 'add' && (
+                                    <AddForm 
+                                        apiKey={apiKey}
+                                        initialData={editItem} 
+                                        onSave={handleSave} 
+                                        onCancel={() => { setView('list'); setEditItem(null); }} 
+                                    />
+                                )}
                             </div>
-                            <BottomNav currentView={view} onChange={(v) => { if(v === 'add') setEditItem(null); setView(v); }} />
+
+                            {view === 'list' && (
+                                <button 
+                                    onClick={() => setView('add')}
+                                    className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:bg-blue-700 active:scale-95 transition-transform z-20"
+                                >
+                                    <i className="fa-solid fa-plus"></i>
+                                </button>
+                            )}
                         </>
                     )}
                 </div>
             );
         };
 
-        const LoginView = ({ history, savedKey, onLogin }) => {
-            const [code, setCode] = React.useState('');
-            const [key, setKey] = React.useState(savedKey || DEFAULT_GEMINI_KEY);
-            
+        // --- 子元件 ---
+
+        const LoginView = ({ onLogin, defaultKey }) => {
+            const [code, setCode] = React.useState(localStorage.getItem('last_trip_code') || '');
+            const [key, setKey] = React.useState(defaultKey);
+
             return (
-                <div className="p-6 flex flex-col items-center justify-center min-h-screen bg-blue-50">
-                    <div className="w-full max-w-sm">
-                        <div className="text-center mb-8">
-                            <h1 className="text-3xl font-bold text-blue-600 mb-2">旅行代購記帳</h1>
-                            <p className="text-gray-500">雲端同步 · AI 辨識 · 相容模式</p>
+                <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gray-50">
+                    <div className="bg-white p-8 rounded-2xl shadow-sm w-full max-w-sm text-center">
+                        <div className="text-4xl text-blue-600 mb-4"><i className="fa-solid fa-wallet"></i></div>
+                        <h1 className="text-xl font-bold text-gray-800 mb-6">記帳系統 + AI</h1>
+                        
+                        <div className="text-left mb-4">
+                            <label className="input-label">旅程代號</label>
+                            <input 
+                                value={code} 
+                                onChange={e => setCode(e.target.value)}
+                                className="input-field uppercase text-center font-bold tracking-widest"
+                                placeholder="例如 JAPAN2024"
+                            />
                         </div>
-                        <div className="bg-white p-6 rounded-xl shadow-lg">
-                            <label className="input-label">旅程代號 (例如：JAPAN2024)</label>
-                            <input type="text" value={code} onChange={e => setCode(e.target.value.toUpperCase())} className="input-field mb-4 uppercase" placeholder="輸入代號" />
-                            
+
+                        <div className="text-left mb-6">
                             <label className="input-label">Gemini API Key</label>
-                            <input type="password" value={key} onChange={e => setKey(e.target.value)} className="input-field mb-6" placeholder="貼上 AI Studio 金鑰" />
-                            
-                            <button onClick={() => onLogin(code, key)} className="btn-primary mb-4 shadow-md">進入記帳</button>
-                            {history.length > 0 && (
-                                <div className="mt-4">
-                                    <p className="text-xs text-gray-400 mb-2">歷史代號：</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {history.map(h => (
-                                            <button key={h} onClick={() => setCode(h)} className="bg-gray-100 px-3 py-1 rounded-full text-sm text-gray-600 hover:bg-gray-200">{h}</button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+                            <input 
+                                type="password"
+                                value={key} 
+                                onChange={e => setKey(e.target.value)}
+                                className="input-field text-sm"
+                                placeholder="貼上 API Key"
+                            />
                         </div>
+
+                        <button 
+                            onClick={() => {
+                                localStorage.setItem('last_trip_code', code);
+                                onLogin(code, key);
+                            }} 
+                            className="btn-primary"
+                        >
+                            開始記帳
+                        </button>
                     </div>
                 </div>
             );
         };
 
-        const Header = ({ tripId, currentView, onBack, onLogout }) => (
-            <div className="bg-white px-4 py-3 shadow-sm sticky top-0 z-10 flex justify-between items-center border-b">
-                <div className="flex items-center">
-                    {currentView !== 'list' && (
-                        <button onClick={onBack} className="mr-3 text-gray-600"><i className="fa-solid fa-arrow-left text-lg"></i></button>
-                    )}
+        const Header = ({ tripId, total, onLogout }) => (
+            <div className="bg-blue-600 text-white p-4 sticky top-0 z-10 shadow-md">
+                <div className="flex justify-between items-start mb-2">
                     <div>
-                        <h2 className="font-bold text-lg text-gray-800">{tripId}</h2>
-                        <span className="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded-full">● 已連線</span>
+                        <span className="text-blue-200 text-xs uppercase tracking-wider">Project</span>
+                        <h2 className="font-bold text-lg">{tripId}</h2>
                     </div>
+                    <button onClick={onLogout} className="text-blue-200 hover:text-white"><i className="fa-solid fa-arrow-right-from-bracket"></i></button>
                 </div>
-                <button onClick={onLogout} className="text-gray-400 hover:text-red-500"><i className="fa-solid fa-power-off"></i></button>
-            </div>
-        );
-
-        const BottomNav = ({ currentView, onChange }) => (
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around py-3 pb-safe z-20 mobile-container mx-auto">
-                <button onClick={() => onChange('list')} className={`flex flex-col items-center ${currentView === 'list' ? 'text-blue-600' : 'text-gray-400'}`}>
-                    <i className="fa-solid fa-list-ul mb-1 text-xl"></i><span className="text-xs">明細</span>
-                </button>
-                <button onClick={() => onChange('add')} className="flex flex-col items-center justify-center -mt-8">
-                    <div className="bg-blue-600 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg shadow-blue-200 transform active:scale-95 transition-transform">
-                        <i className="fa-solid fa-plus text-2xl"></i>
-                    </div>
-                </button>
-                <button onClick={() => onChange('stats')} className={`flex flex-col items-center ${currentView === 'stats' ? 'text-blue-600' : 'text-gray-400'}`}>
-                    <i className="fa-solid fa-chart-pie mb-1 text-xl"></i><span className="text-xs">統計</span>
-                </button>
+                <div>
+                    <span className="text-blue-200 text-xs">目前總花費 (TWD)</span>
+                    <div className="text-3xl font-bold">{formatMoney(total).replace('NT$', '$')}</div>
+                </div>
             </div>
         );
 
         const ExpenseList = ({ expenses, onEdit, onDelete }) => {
             if (expenses.length === 0) return (
-                <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-                    <i className="fa-solid fa-receipt text-4xl mb-3"></i><p>尚無花費紀錄</p><p className="text-sm">按 + 開始記帳</p>
+                <div className="text-center py-20 text-gray-400">
+                    <i className="fa-regular fa-clipboard text-4xl mb-3"></i>
+                    <p>還沒有記帳紀錄</p>
                 </div>
             );
+
             return (
-                <div className="pb-20 space-y-3">
+                <div className="space-y-3 pb-20">
                     {expenses.map(item => (
-                        <div key={item.id} className="card flex justify-between items-start relative active:bg-gray-50 transition-colors" onClick={() => onEdit(item)}>
+                        <div 
+                            key={item.id} 
+                            onClick={() => onEdit(item)}
+                            className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex justify-between items-center active:bg-gray-50"
+                        >
                             <div className="flex-1">
-                                <div className="flex justify-between items-start mb-1">
-                                    <h3 className="font-bold text-gray-800 text-lg">{item.item || "未命名項目"}</h3>
-                                    <span className="font-bold text-gray-900">{formatMoney(item.twdAmount)}</span>
-                                </div>
-                                <div className="flex items-center text-sm text-gray-500 flex-wrap gap-1">
-                                    <span className={`px-2 py-0.5 rounded text-xs ${item.category === '代購' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100'}`}>
-                                        {item.category}{item.category === '代購' && ` - ${item.agencyName}`}
+                                <div className="flex items-center gap-2 mb-1">
+                                    <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs font-medium">
+                                        {item.category}
                                     </span>
-                                    {item.currency !== 'TWD' && <span className="text-gray-400 text-xs">({item.currency} {item.foreignAmount})</span>}
+                                    <span className="font-medium text-gray-800">{item.item || "未命名"}</span>
+                                </div>
+                                <div className="text-xs text-gray-400">
+                                    {item.currency !== 'TWD' && (
+                                        <span className="mr-1">
+                                            {item.currency} {Number(item.foreignAmount).toLocaleString()}
+                                        </span>
+                                    )}
+                                    {item.currency !== 'TWD' && <span>≈ </span>}
+                                    {new Date(item.createdAt?.seconds * 1000).toLocaleDateString()}
                                 </div>
                             </div>
-                            <button onClick={(e) => { e.stopPropagation(); onDelete(item.id); }} className="ml-2 p-2 text-gray-300 hover:text-red-500"><i className="fa-regular fa-trash-can"></i></button>
+                            <div className="flex items-center gap-3">
+                                <div className="text-right">
+                                    <div className="font-bold text-gray-800">{formatMoney(item.twdAmount)}</div>
+                                </div>
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
+                                    className="text-gray-300 hover:text-red-500 px-2"
+                                >
+                                    <i className="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
                         </div>
                     ))}
                 </div>
             );
         };
 
-        const AddEditForm = ({ apiKey, initialData, onSave, onCancel }) => {
-            const [formData, setFormData] = React.useState({
-                category: '飲食', agencyName: '', item: '', currency: 'JPY', foreignAmount: '', exchangeRate: 0.22, twdAmount: ''
+        const AddForm = ({ apiKey, initialData, onSave, onCancel }) => {
+            const [form, setForm] = React.useState({
+                category: '飲食',
+                item: '',
+                currency: 'JPY',
+                foreignAmount: '',
+                exchangeRate: 0.22,
+                twdAmount: ''
             });
-            const [isProcessing, setIsProcessing] = React.useState(false);
-            const fileInputRef = React.useRef(null);
-
-            React.useEffect(() => { if (initialData) setFormData(initialData); }, [initialData]);
+            const [loading, setLoading] = React.useState(false);
+            const fileRef = React.useRef(null);
 
             React.useEffect(() => {
-                if (formData.currency === 'TWD') {
-                    setFormData(prev => ({ ...prev, twdAmount: prev.foreignAmount, exchangeRate: 1 }));
-                } else if (formData.foreignAmount && formData.exchangeRate) {
-                    const twd = Math.round(parseFloat(formData.foreignAmount) * parseFloat(formData.exchangeRate));
-                    setFormData(prev => ({ ...prev, twdAmount: twd }));
+                if (initialData) setForm(initialData);
+            }, [initialData]);
+
+            // 自動計算台幣
+            React.useEffect(() => {
+                if (form.currency === 'TWD') {
+                    setForm(p => ({ ...p, twdAmount: p.foreignAmount, exchangeRate: 1 }));
+                } else if (form.foreignAmount && form.exchangeRate) {
+                    const twd = Math.round(parseFloat(form.foreignAmount) * parseFloat(form.exchangeRate));
+                    setForm(p => ({ ...p, twdAmount: twd }));
                 }
-            }, [formData.foreignAmount, formData.exchangeRate, formData.currency]);
+            }, [form.foreignAmount, form.exchangeRate, form.currency]);
 
-            const handleChange = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
-
+            // 處理圖片上傳與 AI 辨識
             const handleImageUpload = async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
-                setIsProcessing(true);
+
+                setLoading(true);
                 try {
+                    // 1. 轉 Base64
                     const reader = new FileReader();
                     reader.readAsDataURL(file);
                     reader.onload = async () => {
                         const base64Data = reader.result.split(',')[1];
-                        const prompt = `你是一個記帳助手。請辨識收據。回傳JSON物件:{ "item": "品名(繁中)", "currency": "幣別代碼(JPY/KRW/TWD/USD)", "amount": 數字, "category": "類別(飲食/交通/住宿/購物/代購)" }`;
+                        
+                        // 2. 呼叫 Gemini
+                        const prompt = `你是一個記帳助手。請辨識這張收據的內容。
+                        請回傳一個 JSON 物件，格式如下 (不要用Markdown code block，直接回傳JSON):
+                        {
+                            "item": "品名摘要(繁體中文)",
+                            "currency": "幣別(例如 TWD, JPY, KRW, USD)",
+                            "amount": 金額數字,
+                            "category": "建議類別(飲食, 交通, 住宿, 購物, 門票, 其他)"
+                        }`;
+
                         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-                            method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: file.type, data: base64Data } }] }] })
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                contents: [{
+                                    parts: [
+                                        { text: prompt },
+                                        { inlineData: { mimeType: file.type, data: base64Data } }
+                                    ]
+                                }]
+                            })
                         });
+
                         const data = await response.json();
-                        const result = JSON.parse(data.candidates[0].content.parts[0].text.replace(/```json/g, '').replace(/```/g, '').trim());
-                        setFormData(prev => ({
-                            ...prev, item: result.item, currency: result.currency, foreignAmount: result.amount, category: categories.includes(result.category) ? result.category : '購物'
-                        }));
+                        
+                        // 3. 解析結果
+                        if (data.candidates && data.candidates[0].content) {
+                            const text = data.candidates[0].content.parts[0].text;
+                            // 簡單的清理 JSON 字串
+                            const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                            const result = JSON.parse(cleanText);
+
+                            // 4. 填入表單 (預設類別需檢查是否存在於清單中)
+                            setForm(prev => ({
+                                ...prev,
+                                item: result.item || prev.item,
+                                currency: result.currency || prev.currency,
+                                foreignAmount: result.amount || prev.foreignAmount,
+                                category: categories.includes(result.category) ? result.category : '購物'
+                            }));
+                            
+                            alert("辨識完成！請檢查並勾選「確認儲存」。");
+                        } else {
+                            throw new Error("無法解析回應");
+                        }
                     };
-                } catch (error) { alert("辨識失敗: " + error.message); } finally { setIsProcessing(false); }
+                } catch (error) {
+                    console.error(error);
+                    alert("辨識失敗，請手動輸入。\n錯誤訊息: " + error.message);
+                } finally {
+                    setLoading(false);
+                }
             };
 
             return (
-                <div className="bg-white rounded-xl shadow-sm p-4 pb-20">
-                    <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-100 flex justify-between items-center">
-                        <div><h3 className="font-bold text-blue-800">懶人記帳</h3><p className="text-xs text-blue-600">拍照自動填入下方欄位</p></div>
-                        <button onClick={() => fileInputRef.current.click()} className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow active:bg-blue-700 flex items-center" disabled={isProcessing}>
-                            {isProcessing ? <div className="loader mr-2"></div> : <i className="fa-solid fa-camera mr-2"></i>}
-                            {isProcessing ? '辨識中...' : '拍收據'}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                    <h2 className="text-lg font-bold text-gray-800 mb-4 border-b pb-2 flex justify-between items-center">
+                        <span>{initialData ? '修改花費' : '新增花費'}</span>
+                        {/* AI 相機按鈕 */}
+                        <button 
+                            onClick={() => fileRef.current.click()}
+                            disabled={loading}
+                            className="text-sm bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg flex items-center gap-2 hover:bg-blue-100 transition-colors"
+                        >
+                            {loading ? <div className="loader"></div> : <i className="fa-solid fa-camera"></i>}
+                            <span>{loading ? '辨識中...' : '拍收據'}</span>
                         </button>
-                        <input type="file" ref={fileInputRef} className="hidden" accept="image/*" capture="environment" onChange={handleImageUpload} />
-                    </div>
+                        <input 
+                            type="file" 
+                            ref={fileRef} 
+                            accept="image/*" 
+                            capture="environment" 
+                            className="hidden" 
+                            onChange={handleImageUpload} 
+                        />
+                    </h2>
 
-                    <div className="border-t border-gray-100 pt-4">
-                        <h4 className="text-sm font-bold text-gray-500 mb-3 uppercase tracking-wider">手動輸入明細</h4>
-                        <div className="mb-4">
-                            <label className="input-label">消費類別</label>
-                            <div className="flex gap-2 overflow-x-auto category-scroll pb-1">
+                    <div className="space-y-4">
+                        {/* 類別選擇 */}
+                        <div>
+                            <label className="input-label">分類</label>
+                            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                                 {categories.map(c => (
-                                    <button key={c} onClick={() => handleChange('category', c)}
-                                        className={`px-3 py-1.5 rounded-full text-sm whitespace-nowrap border ${formData.category === c ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600 border-gray-200'}`}>
+                                    <button 
+                                        key={c}
+                                        onClick={() => setForm({...form, category: c})}
+                                        className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap border transition-colors ${
+                                            form.category === c 
+                                            ? 'bg-blue-600 text-white border-blue-600' 
+                                            : 'bg-white text-gray-500 border-gray-200'
+                                        }`}
+                                    >
                                         {c}
                                     </button>
                                 ))}
                             </div>
                         </div>
 
-                        {formData.category === '代購' && (
-                            <div className="mb-4 bg-purple-50 p-3 rounded-lg border border-purple-100">
-                                <label className="input-label text-purple-800">代購給誰？</label>
-                                <input type="text" value={formData.agencyName} onChange={e => handleChange('agencyName', e.target.value)} className="input-field border-purple-200 focus:ring-purple-200" placeholder="例如：小美" autoFocus />
-                            </div>
-                        )}
-
-                        <div className="input-group">
+                        {/* 品名 */}
+                        <div>
                             <label className="input-label">品名</label>
-                            <input type="text" value={formData.item} onChange={e => handleChange('item', e.target.value)} className="input-field" placeholder="輸入商品名稱" />
+                            <input 
+                                value={form.item}
+                                onChange={e => setForm({...form, item: e.target.value})}
+                                className="input-field"
+                                placeholder="例如：便利商店"
+                            />
                         </div>
 
-                        <div className="grid grid-cols-3 gap-3 mb-4">
+                        {/* 金額計算區 */}
+                        <div className="grid grid-cols-3 gap-3">
                             <div>
                                 <label className="input-label">幣別</label>
-                                <select value={formData.currency} onChange={e => handleChange('currency', e.target.value)} className="input-field bg-white">
+                                <select 
+                                    value={form.currency}
+                                    onChange={e => setForm({...form, currency: e.target.value})}
+                                    className="input-field bg-white"
+                                >
                                     {currencies.map(c => <option key={c} value={c}>{c}</option>)}
                                 </select>
                             </div>
                             <div className="col-span-2">
                                 <label className="input-label">金額</label>
-                                <input type="number" inputMode="decimal" value={formData.foreignAmount} onChange={e => handleChange('foreignAmount', e.target.value)} className="input-field font-mono text-lg" placeholder="0.00" />
+                                <input 
+                                    type="number"
+                                    inputMode="decimal"
+                                    value={form.foreignAmount}
+                                    onChange={e => setForm({...form, foreignAmount: e.target.value})}
+                                    className="input-field font-mono text-lg font-medium"
+                                    placeholder="0.00"
+                                />
                             </div>
                         </div>
 
-                        {formData.currency !== 'TWD' && (
-                            <div className="grid grid-cols-3 gap-3 mb-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        {/* 匯率與台幣預覽 (非台幣時顯示) */}
+                        {form.currency !== 'TWD' && (
+                            <div className="bg-gray-50 p-4 rounded-xl grid grid-cols-3 gap-3 border border-gray-100">
                                 <div>
-                                    <label className="input-label">匯率</label>
-                                    <input type="number" inputMode="decimal" value={formData.exchangeRate} onChange={e => handleChange('exchangeRate', e.target.value)} className="input-field text-sm" />
+                                    <label className="input-label text-xs">匯率</label>
+                                    <input 
+                                        type="number"
+                                        inputMode="decimal"
+                                        value={form.exchangeRate}
+                                        onChange={e => setForm({...form, exchangeRate: e.target.value})}
+                                        className="input-field text-sm p-2"
+                                    />
                                 </div>
                                 <div className="col-span-2">
-                                    <label className="input-label text-blue-600 font-bold">折合台幣</label>
-                                    <input type="number" value={formData.twdAmount} readOnly className="input-field font-bold text-blue-600 bg-transparent border-none p-2" />
+                                    <label className="input-label text-xs text-blue-600">折合台幣</label>
+                                    <input 
+                                        value={form.twdAmount}
+                                        readOnly
+                                        className="input-field text-blue-600 font-bold bg-transparent border-none p-2"
+                                    />
                                 </div>
                             </div>
                         )}
-
-                        <div className="flex gap-3 mt-6">
-                            <button onClick={onCancel} className="btn-secondary">取消</button>
-                            <button onClick={() => onSave(formData)} className="btn-primary" disabled={formData.category === '代購' && !formData.agencyName}>
-                                <i className="fa-solid fa-check mr-2"></i>確認儲存
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        const StatsView = ({ expenses }) => {
-            const grandTotalTWD = expenses.reduce((sum, item) => sum + Number(item.twdAmount || 0), 0);
-            const personalExpenses = expenses.filter(item => item.category !== '代購');
-            const personalTotalTWD = personalExpenses.reduce((sum, item) => sum + Number(item.twdAmount || 0), 0);
-            
-            const agencyMap = {};
-            expenses.filter(i => i.category === '代購').forEach(item => {
-                const name = item.agencyName || '未知';
-                agencyMap[name] = (agencyMap[name] || 0) + Number(item.twdAmount || 0);
-            });
-
-            const currencyMap = {};
-            personalExpenses.forEach(item => {
-                const curr = item.currency;
-                currencyMap[curr] = (currencyMap[curr] || 0) + Number(item.foreignAmount || 0);
-            });
-
-            return (
-                <div className="pb-20 space-y-4">
-                    <div className="card bg-blue-600 text-white">
-                        <h3 className="text-blue-100 text-sm mb-1">個人總花費 (不含代購)</h3>
-                        <p className="text-3xl font-bold mb-4">{formatMoney(personalTotalTWD)}</p>
-                        <div className="border-t border-blue-500 pt-3">
-                            <p className="text-xs text-blue-200 mb-2">外幣小計 (個人)：</p>
-                            <div className="grid grid-cols-2 gap-2">
-                                {Object.entries(currencyMap).map(([curr, amount]) => (
-                                    <div key={curr} className="text-sm"><span className="opacity-70 w-8 inline-block">{curr}</span> <span className="font-mono">{amount.toLocaleString()}</span></div>
-                                ))}
-                            </div>
-                        </div>
                     </div>
 
-                    {Object.keys(agencyMap).length > 0 && (
-                        <div className="card border-l-4 border-purple-500">
-                            <div className="flex justify-between items-end mb-3">
-                                <h3 className="font-bold text-gray-700">代購收款清單</h3>
-                                <span className="text-purple-600 font-bold">{formatMoney(grandTotalTWD - personalTotalTWD)}</span>
-                            </div>
-                            <div className="space-y-2">
-                                {Object.entries(agencyMap).map(([name, amount]) => (
-                                    <div key={name} className="flex justify-between items-center p-2 bg-purple-50 rounded">
-                                        <span className="text-gray-700 font-medium"><i className="fa-solid fa-user-tag mr-2 text-purple-400"></i>{name}</span>
-                                        <span className="font-bold text-gray-800">{formatMoney(amount)}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="text-center text-gray-400 text-sm mt-8">
-                        <p>旅程總流水帳金額 (含代購)</p>
-                        <p className="text-xl font-bold text-gray-600">{formatMoney(grandTotalTWD)}</p>
+                    <div className="flex gap-3 mt-8">
+                        <button onClick={onCancel} className="btn-secondary">取消</button>
+                        <button onClick={() => onSave(form)} className="btn-primary">
+                            <i className="fa-solid fa-check mr-2"></i>
+                            確認儲存 (計入帳冊)
+                        </button>
                     </div>
                 </div>
             );
