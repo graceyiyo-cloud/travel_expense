@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>基礎記帳 V18 (懸浮按鈕修復)</title>
+    <title>基礎記帳 V19 (版面精修版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -32,7 +32,7 @@
             -webkit-tap-highlight-color: transparent;
         } 
         
-        /* Container styling - Note: backdrop-filter moves fixed children, so FAB must be outside */
+        /* Container styling */
         .mobile-container { 
             max-width: 600px; 
             margin: 0 auto; 
@@ -641,7 +641,7 @@
             };
 
             return (
-                <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4 fade-in">
+                <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 fade-in">
                     <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col border border-white/50">
                         <div className="p-5 border-b border-gray-100 flex justify-between items-center">
                             <h3 className="font-bold text-gray-800 text-lg"><i className="fa-solid fa-calculator mr-2 text-teal-500"></i>消費計算機</h3>
@@ -695,7 +695,7 @@
                 analyze();
             }, []);
             return (
-                <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4 fade-in">
+                <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 fade-in">
                     <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col border border-white/50">
                         <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-teal-500 text-white rounded-t-3xl shadow-sm"><h3 className="font-bold text-lg"><i className="fa-solid fa-chart-line mr-2"></i>AI 記帳分析</h3><button onClick={onClose}><i className="fa-solid fa-xmark text-xl text-teal-100 hover:text-white"></i></button></div>
                         <div className="p-6 overflow-y-auto">{loading ? <div className="text-center py-8"><div className="loader mx-auto mb-4"></div><p className="text-gray-500">AI 分析中...</p></div> : <div className="prose prose-sm text-gray-700 whitespace-pre-wrap leading-relaxed markdown-content">{analysis}</div>}</div>
@@ -712,9 +712,9 @@
                     {expenses.map(item => (
                         <div key={item.id} onClick={() => onEdit(item)} className="card-soft flex justify-between items-center active:scale-[0.98] transition-transform p-4 cursor-pointer">
                             <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1.5">
-                                    <span className="bg-teal-50 text-teal-700 px-2.5 py-0.5 rounded-lg text-xs font-bold border border-teal-100">{item.category}</span>
-                                    <span className="font-bold text-gray-700 line-clamp-1">{item.item || "未命名"}</span>
+                                <div className="mb-1.5">
+                                    <span className="bg-teal-50 text-teal-700 px-2.5 py-0.5 rounded-lg text-xs font-bold border border-teal-100 inline-block mb-1">{item.category}</span>
+                                    <div className="font-bold text-gray-700 break-words leading-snug pr-2">{item.item || "未命名"}</div>
                                 </div>
                                 <div className="flex items-baseline gap-2">
                                     <span className="font-extrabold text-gray-800 text-xl tracking-tight">{item.currency !== 'TWD' ? `${item.currency} ${Number(item.foreignAmount).toLocaleString()}` : formatMoney(item.twdAmount)}</span>
@@ -930,15 +930,20 @@
                             <div className="space-y-3 max-h-[60vh] overflow-y-auto pb-2">
                                 {scannedItems.map((item, idx) => (
                                     <div key={idx} className={`border rounded-xl p-3 transition-colors ${selectedIndices.has(idx) ? 'bg-white border-teal-200 shadow-sm' : 'bg-gray-50 border-gray-100 opacity-60'}`}>
-                                        <div className="flex items-center gap-3">
-                                            <input type="checkbox" className="custom-checkbox flex-shrink-0" checked={selectedIndices.has(idx)} onChange={() => { const newSet = new Set(selectedIndices); if (newSet.has(idx)) newSet.delete(idx); else newSet.add(idx); setSelectedIndices(newSet); }} />
-                                            <div className="flex-1 min-w-0 grid gap-1">
-                                                <input value={item.name} onChange={(e) => updateScannedItem(idx, 'name', e.target.value)} className="border-b border-dashed border-gray-300 w-full text-sm bg-transparent font-medium focus:border-teal-500 focus:outline-none" placeholder="品名" />
-                                                <select value={item.category} onChange={(e) => updateScannedItem(idx, 'category', e.target.value)} className="text-xs text-gray-500 bg-transparent border-none p-0 focus:ring-0 w-full">{categories.map(c => <option key={c} value={c}>{c}</option>)}</select>
+                                        <div className="flex gap-3">
+                                            <div className="pt-2">
+                                                <input type="checkbox" className="custom-checkbox flex-shrink-0" checked={selectedIndices.has(idx)} onChange={() => { const newSet = new Set(selectedIndices); if (newSet.has(idx)) newSet.delete(idx); else newSet.add(idx); setSelectedIndices(newSet); }} />
                                             </div>
-                                            <div className="text-right flex-shrink-0">
-                                                <div className="flex items-center justify-end"><span className="text-xs text-gray-400 mr-1">{scanSettings.currency}</span><input type="number" value={item.amount} onChange={(e) => updateScannedItem(idx, 'amount', e.target.value)} className="border-b border-dashed border-gray-300 w-20 text-sm font-mono bg-transparent text-right focus:border-teal-500 focus:outline-none font-bold text-gray-800" /></div>
-                                                {scanSettings.currency !== 'TWD' && <div className="text-xs text-teal-600 mt-0.5 font-medium">≈ {formatMoney(Math.round(item.amount * scanSettings.exchangeRate))}</div>}
+                                            <div className="flex-1 min-w-0 flex flex-col gap-2">
+                                                <input value={item.name} onChange={(e) => updateScannedItem(idx, 'name', e.target.value)} className="border-b border-dashed border-gray-300 w-full text-sm bg-transparent font-medium focus:border-teal-500 focus:outline-none py-1" placeholder="品名" />
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <select value={item.category} onChange={(e) => updateScannedItem(idx, 'category', e.target.value)} className="text-xs text-gray-500 bg-transparent border-none p-0 focus:ring-0 w-24">{categories.map(c => <option key={c} value={c}>{c}</option>)}</select>
+                                                    <div className="flex items-center gap-1 justify-end flex-1">
+                                                        <span className="text-xs text-gray-400 whitespace-nowrap">{scanSettings.currency}</span>
+                                                        <input type="number" value={item.amount} onChange={(e) => updateScannedItem(idx, 'amount', e.target.value)} className="border-b border-dashed border-gray-300 w-24 text-sm font-mono bg-transparent text-right focus:border-teal-500 focus:outline-none font-bold text-gray-800" />
+                                                    </div>
+                                                </div>
+                                                {scanSettings.currency !== 'TWD' && <div className="text-right text-xs text-teal-600 font-medium">≈ {formatMoney(Math.round(item.amount * scanSettings.exchangeRate))}</div>}
                                             </div>
                                         </div>
                                     </div>
