@@ -275,8 +275,9 @@
             const [searchTerm, setSearchTerm] = React.useState(''); 
             const [showSearchBar, setShowSearchBar] = React.useState(false); // 控制搜尋列顯示
             
-            // Custom Dialog States
+            // Custom Dialog States - Enhanced to support 'prompt'
             const [dialog, setDialog] = React.useState({ show: false, type: 'alert', title: '', msg: '', onConfirm: null });
+            const [promptValue, setPromptValue] = React.useState(''); // For prompt input
             
             // Modals
             const [showAnalysis, setShowAnalysis] = React.useState(false);
@@ -324,10 +325,31 @@
             };
 
             const showConfirm = (msg, onConfirm, title = "確認") => {
-                setDialog({ show: true, type: 'confirm', title, msg, onConfirm: () => {
-                    onConfirm();
-                    setDialog(prev => ({...prev, show: false}));
-                }});
+                setDialog({ 
+                    show: true, 
+                    type: 'confirm', 
+                    title, 
+                    msg, 
+                    onConfirm: () => {
+                        // Close dialog FIRST, then run logic to avoid state conflicts if logic opens another dialog
+                        setDialog(prev => ({...prev, show: false}));
+                        setTimeout(() => onConfirm(), 50);
+                    }
+                });
+            };
+
+            const showPrompt = (msg, onConfirm, title = "輸入") => {
+                setPromptValue(''); // Reset value
+                setDialog({
+                    show: true,
+                    type: 'prompt', // New type
+                    title,
+                    msg,
+                    onConfirm: (val) => {
+                        setDialog(prev => ({...prev, show: false}));
+                        setTimeout(() => onConfirm(val), 50);
+                    }
+                });
             };
 
             const handleLogin = (code, key) => {
@@ -477,64 +499,64 @@
 
             const handleDeleteProject = () => {
                 const confirmMsg = `警告：您即將刪除整個專案「${tripId}」\n\n這將會：\n1. 刪除所有記帳資料\n2. 刪除自訂分類\n3. 從歷史紀錄中移除\n4. 無法復原\n\n您確定要繼續嗎？`;
-                showConfirm(confirmMsg, async () => {
-                    // Double Confirm
-                    const doubleCheck = prompt(`請輸入專案名稱「${tripId}」以確認刪除：`);
-                    // Case insensitive check just in case, but strict is better for delete.
-                    // tripId is always UPPERCASE in this app logic, so we compare with that.
-                    if (!doubleCheck || doubleCheck.toUpperCase() !== tripId) {
-                        showAlert("輸入不正確，已取消刪除。");
-                        return;
-                    }
-
-                    // Show loading overlay
-                    const loadingDiv = document.createElement('div');
-                    loadingDiv.id = 'delete-loading-overlay';
-                    loadingDiv.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(2px);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;color:white;font-weight:bold;';
-                    loadingDiv.innerHTML = '<div class="loader border-t-white border-white/30 mb-4 w-10 h-10 border-4"></div><div>正在徹底刪除資料...</div>';
-                    document.body.appendChild(loadingDiv);
-
-                    try {
-                        const ref = db.collection('artifacts').doc(appId)
-                                      .collection('public').doc('data')
-                                      .collection(`${tripId}_simple_v1`);
-                        
-                        // 1. Delete all documents in subcollection using a loop to handle batches > 500
-                        let deletedCount = 0;
-                        while (true) {
-                            // Get a batch of documents
-                            const snapshot = await ref.limit(400).get();
-                            if (snapshot.empty) break;
-                            
-                            const batch = db.batch();
-                            snapshot.docs.forEach((doc) => {
-                                batch.delete(doc.ref);
-                            });
-                            await batch.commit();
-                            deletedCount += snapshot.size;
+                
+                showConfirm(confirmMsg, () => {
+                    // 使用 showPrompt 替代 window.prompt
+                    showPrompt(`請輸入專案名稱「${tripId}」以確認刪除：`, async (doubleCheck) => {
+                        if (!doubleCheck || doubleCheck.toUpperCase() !== tripId) {
+                            showAlert("輸入不正確，已取消刪除。");
+                            return;
                         }
 
-                        // 2. Clear LocalStorage Categories
-                        localStorage.removeItem(`categories_${tripId}`);
-                        
-                        // 3. Clear from Login History
-                        const currentHistory = JSON.parse(localStorage.getItem('login_history') || '[]');
-                        const newHistory = currentHistory.filter(h => h !== tripId);
-                        localStorage.setItem('login_history', JSON.stringify(newHistory));
-                        setLoginHistory(newHistory);
-                        
-                        // Remove loading overlay
-                        if(document.body.contains(loadingDiv)) document.body.removeChild(loadingDiv);
+                        // Show loading overlay
+                        const loadingDiv = document.createElement('div');
+                        loadingDiv.id = 'delete-loading-overlay';
+                        loadingDiv.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(2px);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;color:white;font-weight:bold;';
+                        loadingDiv.innerHTML = '<div class="loader border-t-white border-white/30 mb-4 w-10 h-10 border-4"></div><div>正在徹底刪除資料...</div>';
+                        document.body.appendChild(loadingDiv);
 
-                        // 4. Reset View
-                        showAlert(`專案已刪除 (共清除 ${deletedCount} 筆資料)。`, "刪除成功");
-                        setView('login');
-                        setTripId('');
-                        setExpenses([]);
-                    } catch (e) {
-                        if(document.body.contains(loadingDiv)) document.body.removeChild(loadingDiv);
-                        showAlert("刪除專案失敗: " + e.message, "錯誤");
-                    }
+                        try {
+                            const ref = db.collection('artifacts').doc(appId)
+                                          .collection('public').doc('data')
+                                          .collection(`${tripId}_simple_v1`);
+                            
+                            // 1. Delete all documents in subcollection using a loop
+                            let deletedCount = 0;
+                            while (true) {
+                                // Get a batch of documents
+                                const snapshot = await ref.limit(400).get();
+                                if (snapshot.empty) break;
+                                
+                                const batch = db.batch();
+                                snapshot.docs.forEach((doc) => {
+                                    batch.delete(doc.ref);
+                                });
+                                await batch.commit();
+                                deletedCount += snapshot.size;
+                            }
+
+                            // 2. Clear LocalStorage Categories
+                            localStorage.removeItem(`categories_${tripId}`);
+                            
+                            // 3. Clear from Login History
+                            const currentHistory = JSON.parse(localStorage.getItem('login_history') || '[]');
+                            const newHistory = currentHistory.filter(h => h !== tripId);
+                            localStorage.setItem('login_history', JSON.stringify(newHistory));
+                            setLoginHistory(newHistory);
+                            
+                            // Remove loading overlay
+                            if(document.body.contains(loadingDiv)) document.body.removeChild(loadingDiv);
+
+                            // 4. Reset View
+                            showAlert(`專案已刪除 (共清除 ${deletedCount} 筆資料)。`, "刪除成功");
+                            setView('login');
+                            setTripId('');
+                            setExpenses([]);
+                        } catch (e) {
+                            if(document.body.contains(loadingDiv)) document.body.removeChild(loadingDiv);
+                            showAlert("刪除專案失敗: " + e.message, "錯誤");
+                        }
+                    }, "危險操作");
                 }, "危險操作");
             };
 
@@ -563,13 +585,33 @@
                         {dialog.show && (
                             <div className="fixed inset-0 bg-stone-800/40 z-[3000] flex items-center justify-center p-4 fade-in backdrop-blur-sm">
                                 <div className="bg-cream-50 rounded-xl shadow-lg w-full max-w-xs transform transition-all scale-100 p-6 text-center border border-cream-200">
-                                    <h3 className={`font-bold text-lg mb-2 ${dialog.type === 'confirm' ? 'text-red-500' : 'text-sage-700'}`}>{dialog.title}</h3>
+                                    <h3 className={`font-bold text-lg mb-2 ${dialog.type === 'confirm' || dialog.type === 'prompt' ? 'text-red-500' : 'text-sage-700'}`}>{dialog.title}</h3>
                                     <p className="text-stone-600 mb-6 text-sm whitespace-pre-line leading-relaxed">{dialog.msg}</p>
+                                    
+                                    {dialog.type === 'prompt' && (
+                                        <input 
+                                            type="text" 
+                                            value={promptValue}
+                                            onChange={(e) => setPromptValue(e.target.value)}
+                                            className="w-full border border-stone-300 rounded-lg p-2 mb-6 text-center outline-none focus:border-red-400"
+                                            placeholder="輸入專案名稱"
+                                            autoFocus
+                                        />
+                                    )}
+
                                     <div className="flex gap-3 justify-center">
-                                        {dialog.type === 'confirm' && (
+                                        {(dialog.type === 'confirm' || dialog.type === 'prompt') && (
                                             <button onClick={() => setDialog(prev => ({...prev, show: false}))} className="px-4 py-2.5 rounded-lg bg-stone-100 text-stone-600 font-medium text-sm flex-1 hover:bg-stone-200 transition-colors">取消</button>
                                         )}
-                                        <button onClick={dialog.onConfirm} className={`px-4 py-2.5 rounded-lg text-white font-medium text-sm flex-1 transition-colors shadow-sm ${dialog.type === 'confirm' ? 'bg-red-500 hover:bg-red-600' : 'bg-sage-400 hover:bg-sage-500'}`}>確定</button>
+                                        <button 
+                                            onClick={() => {
+                                                if (dialog.type === 'prompt') dialog.onConfirm(promptValue);
+                                                else dialog.onConfirm();
+                                            }} 
+                                            className={`px-4 py-2.5 rounded-lg text-white font-medium text-sm flex-1 transition-colors shadow-sm ${dialog.type === 'confirm' || dialog.type === 'prompt' ? 'bg-red-500 hover:bg-red-600' : 'bg-sage-400 hover:bg-sage-500'}`}
+                                        >
+                                            確定
+                                        </button>
                                     </div>
                                 </div>
                             </div>
