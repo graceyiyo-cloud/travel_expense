@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>基礎記帳 V32 (UI微調版)</title>
+    <title>旅遊掃描辨識記帳</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -20,6 +20,13 @@
             theme: {
                 extend: {
                     colors: {
+                        cream: {
+                            50: '#fffbf0', // Lighter cream
+                            100: '#fffdf5',
+                            200: '#fff8e1', // Butter
+                            300: '#ffecb3',
+                            400: '#ffe082',
+                        },
                         sage: {
                             50: '#f4f7f4',
                             100: '#e3ebe3',
@@ -32,9 +39,8 @@
                             800: '#314033',
                             900: '#2a352b',
                         },
-                        paper: '#fdfbf7', // Warm off-white background
                         stone: {
-                            850: '#1c1917', // High contrast text
+                            850: '#1c1917',
                         }
                     }
                 }
@@ -43,11 +49,11 @@
     </script>
 
     <style>
-        /* Artsy Paper Background */
+        /* Creamy Butter Background */
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            background-color: #fdfbf7; /* Paper color */
-            color: #44403c; /* Stone-700 for text */
+            background-color: #fefce8; /* Tailwind yellow-50 base */
+            color: #44403c; 
             -webkit-tap-highlight-color: transparent;
         } 
         
@@ -56,14 +62,14 @@
             max-width: 600px; 
             margin: 0 auto; 
             min-height: 100vh; 
-            background-color: #ffffff;
+            background-color: #fffdf7; /* Warm creamy white */
             position: relative; 
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.03); 
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.05); 
             display: flex;
             flex-direction: column;
             padding-bottom: 100px;
-            border-left: 1px solid #f5f5f4;
-            border-right: 1px solid #f5f5f4;
+            border-left: 1px solid #fef3c7;
+            border-right: 1px solid #fef3c7;
         }
         
         .input-label { display: block; font-size: 0.85rem; color: #78716c; margin-bottom: 6px; font-weight: 500; letter-spacing: 0.02em; }
@@ -76,7 +82,7 @@
             font-size: 1rem; 
             transition: all 0.2s; 
             -webkit-appearance: none; 
-            background: #fafaf9; 
+            background: #fff; 
             color: #44403c;
         }
         .input-field:focus { 
@@ -85,7 +91,7 @@
             background: white;
             box-shadow: 0 0 0 2px rgba(118, 150, 121, 0.1); 
         } 
-        .input-field::placeholder { color: #a8a29e; }
+        .input-field::placeholder { color: #d6d3d1; }
         
         .input-sm { padding: 8px; font-size: 0.9rem; }
         
@@ -121,8 +127,8 @@
         .card-soft {
             background: white;
             border-radius: 12px;
-            border: 1px solid #d6d3d1; /* Darker border (Stone-300) for better visibility */
-            box-shadow: 0 3px 6px rgba(0,0,0,0.05); /* Slightly stronger shadow */
+            border: 1px solid #e7e5e4;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.03); 
         }
 
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -188,6 +194,15 @@
         }
         .sortable-drag {
             cursor: grabbing;
+        }
+
+        /* Animations */
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-slide-down {
+            animation: slideDown 0.3s ease-out forwards;
         }
     </style>
 </head>
@@ -258,6 +273,7 @@
             const [loginHistory, setLoginHistory] = React.useState([]);
             const [filterCategory, setFilterCategory] = React.useState('All');
             const [searchTerm, setSearchTerm] = React.useState(''); 
+            const [showSearchBar, setShowSearchBar] = React.useState(false); // 控制搜尋列顯示
             
             // Custom Dialog States
             const [dialog, setDialog] = React.useState({ show: false, type: 'alert', title: '', msg: '', onConfirm: null });
@@ -325,11 +341,19 @@
                     localStorage.setItem('gemini_api_key', cleanKey);
                 }
                 
+                // Update History only if valid login
                 const newHistory = [upperCode, ...loginHistory.filter(h => h !== upperCode)].slice(0, 5);
                 setLoginHistory(newHistory);
                 localStorage.setItem('login_history', JSON.stringify(newHistory));
 
                 setView('list');
+            };
+
+            const handleDeleteHistory = (e, codeToDelete) => {
+                e.stopPropagation(); // 阻止點擊觸發登入
+                const newHistory = loginHistory.filter(h => h !== codeToDelete);
+                setLoginHistory(newHistory);
+                localStorage.setItem('login_history', JSON.stringify(newHistory));
             };
 
             const handleUpdateKey = (newKey) => {
@@ -347,7 +371,6 @@
                 if (!categories.includes(newCat)) {
                     const newCategories = [...categories, newCat];
                     setCategories(newCategories);
-                    // Save to specific trip ID key
                     localStorage.setItem(`categories_${tripId}`, JSON.stringify(newCategories));
                 }
             };
@@ -361,7 +384,6 @@
                 if (!newName || newName === oldName) return;
                 const newCats = categories.map(c => c === oldName ? newName : c);
                 setCategories(newCats);
-                // Save to specific trip ID key
                 localStorage.setItem(`categories_${tripId}`, JSON.stringify(newCats));
 
                 const batch = db.batch();
@@ -388,7 +410,6 @@
                 const deleteLogic = () => {
                     const newCats = categories.filter(c => c !== catToDelete);
                     setCategories(newCats);
-                    // Save to specific trip ID key
                     localStorage.setItem(`categories_${tripId}`, JSON.stringify(newCats));
                     if (filterCategory === catToDelete) setFilterCategory('All');
                 };
@@ -454,6 +475,48 @@
                 }, "刪除資料");
             };
 
+            const handleDeleteProject = () => {
+                const confirmMsg = `警告：您即將刪除整個專案「${tripId}」\n\n這將會：\n1. 刪除所有記帳資料\n2. 刪除自訂分類\n3. 無法復原\n\n您確定要繼續嗎？`;
+                showConfirm(confirmMsg, async () => {
+                    // Double Confirm
+                    const doubleCheck = prompt(`請輸入專案名稱「${tripId}」以確認刪除：`);
+                    if (doubleCheck !== tripId) {
+                        showAlert("輸入不正確，已取消刪除。");
+                        return;
+                    }
+
+                    try {
+                        // 1. Delete all documents in subcollection (Client-side implementation limitation: batch delete 500 at a time)
+                        // Note: For large collections, this should be done via Cloud Functions, but for client-side simple usage:
+                        const ref = db.collection('artifacts').doc(appId)
+                                      .collection('public').doc('data')
+                                      .collection(`${tripId}_simple_v1`);
+                        const snapshot = await ref.get();
+                        
+                        if (snapshot.empty) {
+                            // Empty collection
+                        } else {
+                            const batch = db.batch();
+                            snapshot.docs.forEach((doc) => {
+                                batch.delete(doc.ref);
+                            });
+                            await batch.commit();
+                        }
+
+                        // 2. Clear LocalStorage Categories
+                        localStorage.removeItem(`categories_${tripId}`);
+                        
+                        // 3. Reset View
+                        showAlert("專案資料已全部刪除。", "刪除成功");
+                        setView('login');
+                        setTripId('');
+                        setExpenses([]);
+                    } catch (e) {
+                        showAlert("刪除專案失敗: " + e.message, "錯誤");
+                    }
+                }, "危險操作");
+            };
+
             // Enhanced Filter Logic with Search
             const filteredExpenses = React.useMemo(() => {
                 let result = expenses;
@@ -477,10 +540,10 @@
                 <>
                     <div className="mobile-container">
                         {dialog.show && (
-                            <div className="fixed inset-0 bg-stone-800/40 z-[3000] flex items-center justify-center p-4 fade-in">
-                                <div className="bg-white rounded-xl shadow-lg w-full max-w-xs transform transition-all scale-100 p-6 text-center border border-stone-100">
+                            <div className="fixed inset-0 bg-stone-800/40 z-[3000] flex items-center justify-center p-4 fade-in backdrop-blur-sm">
+                                <div className="bg-cream-50 rounded-xl shadow-lg w-full max-w-xs transform transition-all scale-100 p-6 text-center border border-cream-200">
                                     <h3 className={`font-bold text-lg mb-2 ${dialog.type === 'confirm' ? 'text-red-500' : 'text-sage-700'}`}>{dialog.title}</h3>
-                                    <p className="text-stone-600 mb-6 text-sm whitespace-pre-line">{dialog.msg}</p>
+                                    <p className="text-stone-600 mb-6 text-sm whitespace-pre-line leading-relaxed">{dialog.msg}</p>
                                     <div className="flex gap-3 justify-center">
                                         {dialog.type === 'confirm' && (
                                             <button onClick={() => setDialog(prev => ({...prev, show: false}))} className="px-4 py-2.5 rounded-lg bg-stone-100 text-stone-600 font-medium text-sm flex-1 hover:bg-stone-200 transition-colors">取消</button>
@@ -492,7 +555,7 @@
                         )}
 
                         {view === 'login' ? (
-                            <LoginView onLogin={handleLogin} defaultKey={apiKey} history={loginHistory} />
+                            <LoginView onLogin={handleLogin} handleDeleteHistory={handleDeleteHistory} defaultKey={apiKey} history={loginHistory} />
                         ) : (
                             <>
                                 {/* Combined Header & Filter Block - HIDDEN IN ADD VIEW */}
@@ -505,39 +568,44 @@
                                             onLogout={() => window.location.reload()} 
                                             onAnalysis={() => setShowAnalysis(true)} 
                                             onStats={() => setShowStats(true)}
+                                            onDeleteProject={handleDeleteProject}
+                                            toggleSearch={() => setShowSearchBar(!showSearchBar)}
+                                            isSearchOpen={showSearchBar}
                                         />
                                         
                                         {/* Integrated Search & Filter Bar */}
-                                        <div className="bg-white/95 backdrop-blur-sm border-b border-stone-100 shadow-sm px-3 py-3 flex flex-col gap-3">
+                                        <div className="bg-cream-50/95 backdrop-blur-sm border-b border-cream-200 shadow-sm px-3 py-3 flex flex-col gap-3">
                                             
-                                            {/* Search Input */}
-                                            <div className="relative w-full">
-                                                <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-stone-400"></i>
-                                                <input 
-                                                    type="text" 
-                                                    value={searchTerm}
-                                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                                    placeholder="搜尋品名或金額..." 
-                                                    className="w-full bg-stone-50 border border-stone-200 text-stone-700 text-sm rounded-lg pl-10 pr-10 py-2.5 outline-none focus:bg-white focus:border-sage-400 transition-all placeholder-stone-400"
-                                                />
-                                                {searchTerm && (
-                                                    <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-stone-400 hover:text-stone-600">
-                                                        <i className="fa-solid fa-circle-xmark"></i>
-                                                    </button>
-                                                )}
-                                            </div>
+                                            {/* Search Input (Conditionally Rendered) */}
+                                            {showSearchBar && (
+                                                <div className="relative w-full animate-slide-down mb-1">
+                                                    <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-stone-400"></i>
+                                                    <input 
+                                                        type="text" 
+                                                        value={searchTerm}
+                                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                                        placeholder="搜尋品名或金額..." 
+                                                        autoFocus
+                                                        className="w-full bg-white border border-stone-200 text-stone-700 text-sm rounded-lg pl-10 pr-10 py-2.5 outline-none focus:border-sage-400 transition-all placeholder-stone-300"
+                                                    />
+                                                    {searchTerm && (
+                                                        <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-stone-400 hover:text-stone-600">
+                                                            <i className="fa-solid fa-circle-xmark"></i>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
 
                                             <div className="flex items-center">
                                                 <div className="flex-1 overflow-x-auto no-scrollbar flex items-center gap-2 px-1">
-                                                    {/* Original Sage Green for 'All' button */}
-                                                    <button onClick={() => setFilterCategory('All')} className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-all flex-shrink-0 ${filterCategory === 'All' ? 'bg-sage-400 text-white shadow-sm' : 'bg-stone-50 text-stone-500 hover:bg-stone-100'}`}>全部</button>
+                                                    {/* Filter Buttons */}
+                                                    <button onClick={() => setFilterCategory('All')} className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-all flex-shrink-0 ${filterCategory === 'All' ? 'bg-sage-400 text-white shadow-sm' : 'bg-white text-stone-500 hover:bg-stone-50 border border-stone-100'}`}>全部</button>
                                                     {categories.map(c => (
-                                                        // Original Sage Green for active category buttons
-                                                        <button key={c} onClick={() => setFilterCategory(c)} className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-all flex-shrink-0 ${filterCategory === c ? 'bg-sage-400 text-white shadow-sm' : 'bg-stone-50 text-stone-500 hover:bg-stone-100'}`}>{c}</button>
+                                                        <button key={c} onClick={() => setFilterCategory(c)} className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-all flex-shrink-0 ${filterCategory === c ? 'bg-sage-400 text-white shadow-sm' : 'bg-white text-stone-500 hover:bg-stone-50 border border-stone-100'}`}>{c}</button>
                                                     ))}
                                                 </div>
-                                                <div className="pl-2 border-l border-stone-200 ml-2">
-                                                    <button onClick={() => setShowCatManager(true)} className="w-9 h-9 rounded-full bg-stone-50 text-stone-400 flex items-center justify-center hover:bg-sage-50 hover:text-sage-600 transition-colors" title="管理分類">
+                                                <div className="pl-2 border-l border-cream-200 ml-2">
+                                                    <button onClick={() => setShowCatManager(true)} className="w-9 h-9 rounded-full bg-white text-stone-400 flex items-center justify-center hover:bg-sage-50 hover:text-sage-600 transition-colors border border-stone-100" title="管理分類">
                                                         <i className="fa-solid fa-gear"></i>
                                                     </button>
                                                 </div>
@@ -575,22 +643,45 @@
 
         // --- Sub Components ---
 
-        const LoginView = ({ onLogin, defaultKey, history }) => {
+        const LoginView = ({ onLogin, handleDeleteHistory, defaultKey, history }) => {
             const [code, setCode] = React.useState('');
             const [key, setKey] = React.useState(defaultKey || '');
             React.useEffect(() => { if (history && history.length > 0) setCode(history[0]); }, [history]);
             return (
                 // Added flex-grow and w-full to ensure it fills the parent mobile-container for perfect centering
                 <div className="flex-grow flex flex-col items-center justify-center p-6 w-full">
-                    <div className="bg-white/80 backdrop-blur-md p-8 rounded-2xl shadow-sm border border-stone-100 w-full max-w-sm text-center">
+                    <div className="bg-white/80 backdrop-blur-md p-8 rounded-2xl shadow-sm border border-cream-200 w-full max-w-sm text-center">
                         <div className="text-5xl text-sage-400 mb-4"><i className="fa-solid fa-wallet"></i></div>
                         <h1 className="text-2xl font-bold text-stone-700 mb-1 tracking-wide">旅行記帳</h1>
                         <p className="text-stone-400 text-sm mb-8">紀錄每一筆美好的回憶</p>
                         
                         <div className="text-left mb-5">
                             <label className="input-label ml-1">旅程代號</label>
-                            <input value={code} onChange={e => setCode(e.target.value)} className="input-field uppercase text-center font-bold tracking-widest text-sage-700 text-lg" placeholder="例如 JAPAN" />
-                            {history.length > 0 && <div className="mt-3 flex flex-wrap gap-2 justify-center">{history.map(h => <button key={h} onClick={() => setCode(h)} className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${code === h ? 'bg-sage-50 border-sage-200 text-sage-700 font-bold' : 'bg-white border-stone-200 text-stone-500 hover:bg-stone-50'}`}>{h}</button>)}</div>}
+                            <input 
+                                value={code} 
+                                onChange={e => setCode(e.target.value)} 
+                                className="input-field uppercase text-center font-bold tracking-widest text-sage-700 text-lg placeholder:text-stone-300 placeholder:text-sm placeholder:font-normal placeholder:tracking-normal" 
+                                placeholder="例如：小花-2026日本" 
+                            />
+                            <p className="text-xs text-red-400 mt-2 px-1 leading-relaxed">
+                                <i className="fa-solid fa-circle-info mr-1"></i>
+                                請以自己的名稱作為開頭，以免代號跟別人重複。
+                            </p>
+                            
+                            {history.length > 0 && (
+                                <div className="mt-4 flex flex-wrap gap-2 justify-center">
+                                    {history.map(h => (
+                                        <div key={h} className={`group flex items-center rounded-full border transition-colors ${code === h ? 'bg-sage-50 border-sage-200' : 'bg-white border-stone-200 hover:bg-cream-50'}`}>
+                                            <button onClick={() => setCode(h)} className={`text-xs px-3 py-1.5 rounded-l-full ${code === h ? 'text-sage-700 font-bold' : 'text-stone-500'}`}>
+                                                {h}
+                                            </button>
+                                            <button onClick={(e) => handleDeleteHistory(e, h)} className="pr-2 pl-1 py-1.5 rounded-r-full text-stone-300 hover:text-red-400 transition-colors">
+                                                <i className="fa-solid fa-xmark text-[10px]"></i>
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                         <div className="text-left mb-8 relative">
                             <label className="input-label ml-1">Gemini API Key</label>
@@ -613,7 +704,7 @@
             );
         };
 
-        const Header = ({ tripId, expenses, filterCategory, onLogout, onAnalysis, onStats }) => {
+        const Header = ({ tripId, expenses, filterCategory, onLogout, onAnalysis, onStats, onDeleteProject, toggleSearch, isSearchOpen }) => {
             const totals = React.useMemo(() => {
                 const map = {};
                 expenses.forEach(e => {
@@ -635,8 +726,18 @@
                             <h2 className="font-bold text-xl leading-tight tracking-wide">{tripId}</h2>
                         </div>
                         <div className="flex gap-1 bg-white/10 rounded-full p-1 backdrop-blur-sm">
+                             {/* 搜尋按鈕 */}
+                             <button onClick={toggleSearch} className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${isSearchOpen ? 'bg-white text-sage-600' : 'hover:bg-white/20'}`} title="搜尋">
+                                <i className="fa-solid fa-magnifying-glass text-lg"></i>
+                            </button>
                             <button onClick={onStats} className="w-9 h-9 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors" title="統計"><i className="fa-solid fa-chart-pie text-lg"></i></button>
                             <button onClick={onAnalysis} className="w-9 h-9 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors" title="分析"><i className="fa-solid fa-wand-magic-sparkles text-lg text-yellow-100"></i></button>
+                            
+                            {/* 刪除專案按鈕 */}
+                            <button onClick={onDeleteProject} className="w-9 h-9 rounded-full hover:bg-red-500/80 flex items-center justify-center transition-colors text-red-200 hover:text-white" title="刪除專案">
+                                <i className="fa-solid fa-trash-can text-lg"></i>
+                            </button>
+                            
                             <button onClick={onLogout} className="w-9 h-9 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors" title="登出"><i className="fa-solid fa-arrow-right-from-bracket text-lg"></i></button>
                         </div>
                     </div>
@@ -721,19 +822,15 @@
                 
                 const sortable = new Sortable(listRef.current, {
                     animation: 150,
-                    handle: '.drag-handle', // Only allow dragging from the handle
+                    handle: '.drag-handle', 
                     ghostClass: 'sortable-ghost',
                     dragClass: 'sortable-drag',
-                    delay: 100, // Small delay to prevent accidental drags on scroll
+                    delay: 100,
                     delayOnTouchOnly: true,
                     onEnd: (evt) => {
-                        // Create a copy of current categories
                         const newItems = [...categories];
-                        // Remove item from old index
                         const [movedItem] = newItems.splice(evt.oldIndex, 1);
-                        // Insert item at new index
                         newItems.splice(evt.newIndex, 0, movedItem);
-                        // Call the reorder handler
                         onReorder(newItems);
                     }
                 });
@@ -747,16 +844,16 @@
 
             return (
                 <div className="fixed inset-0 bg-stone-800/40 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 fade-in">
-                    <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl w-full max-w-sm flex flex-col max-h-[80vh] border border-stone-100">
-                        <div className="p-5 border-b border-stone-100 flex justify-between items-center">
+                    <div className="bg-cream-50/95 backdrop-blur-md rounded-2xl shadow-xl w-full max-w-sm flex flex-col max-h-[80vh] border border-cream-200">
+                        <div className="p-5 border-b border-cream-200 flex justify-between items-center">
                             <h3 className="font-bold text-stone-700 text-lg">分類管理</h3>
                             <button onClick={onClose}><i className="fa-solid fa-xmark text-xl text-stone-400 hover:text-stone-600"></i></button>
                         </div>
                         <div className="p-4 overflow-y-auto flex-1 space-y-2" ref={listRef}>
                             {categories.map((cat, idx) => (
                                 <div 
-                                    key={cat} // Use category name as key for Sortable to track efficiently
-                                    className="flex justify-between items-center p-3 border border-stone-100 rounded-xl bg-stone-50 hover:bg-white hover:shadow-sm transition-all"
+                                    key={cat} 
+                                    className="flex justify-between items-center p-3 border border-cream-100 rounded-xl bg-white hover:shadow-sm transition-all"
                                 >
                                     <div className="drag-handle mr-3 text-stone-300 cursor-grab active:cursor-grabbing p-1">
                                         <i className="fa-solid fa-bars"></i>
@@ -776,8 +873,8 @@
                                 </div>
                             ))}
                         </div>
-                        <div className="p-4 border-t border-stone-100 flex gap-2">
-                            <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="新增分類名稱" className="flex-1 border border-stone-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-sage-400 focus:bg-white bg-stone-50 transition-colors" />
+                        <div className="p-4 border-t border-cream-200 flex gap-2">
+                            <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="新增分類名稱" className="flex-1 border border-stone-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-sage-400 focus:bg-white bg-white transition-colors" />
                             <button onClick={handleAdd} className="bg-sage-400 text-white w-10 rounded-lg hover:bg-sage-500 shadow-sm"><i className="fa-solid fa-plus"></i></button>
                         </div>
                     </div>
@@ -821,15 +918,15 @@
 
             return (
                 <div className="fixed inset-0 bg-stone-800/40 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 fade-in">
-                    <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col border border-stone-100">
-                        <div className="p-5 border-b border-stone-100 flex justify-between items-center">
+                    <div className="bg-cream-50/95 backdrop-blur-xl rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col border border-cream-100">
+                        <div className="p-5 border-b border-cream-100 flex justify-between items-center">
                             <h3 className="font-bold text-stone-700 text-lg"><i className="fa-solid fa-calculator mr-2 text-sage-400"></i>消費計算機</h3>
                             <button onClick={onClose}><i className="fa-solid fa-xmark text-lg text-stone-400 hover:text-stone-600"></i></button>
                         </div>
                         <div className="p-5 overflow-y-auto flex-1">
                             {stats.length === 0 ? <p className="text-center text-stone-400 py-4">無資料</p> : (
                                 <div className="space-y-6">
-                                    <p className="text-xs text-stone-400 mb-2 text-center bg-stone-50 rounded-full py-1 mx-10">勾選以計算合計金額</p>
+                                    <p className="text-xs text-stone-400 mb-2 text-center bg-white rounded-full py-1 mx-10 border border-stone-100">勾選以計算合計金額</p>
                                     {stats.map((item, idx) => {
                                         const isExcluded = excludedCats.has(item.cat);
                                         return (
@@ -849,7 +946,7 @@
                                 </div>
                             )}
                         </div>
-                        <div className="p-5 border-t border-stone-100 bg-stone-50/50 rounded-b-2xl"><div className="flex justify-between items-center"><span className="text-stone-600 font-bold">合計金額 (已選)</span><span className="text-2xl font-bold text-sage-600">{formatMoney(selectedTotal)}</span></div></div>
+                        <div className="p-5 border-t border-cream-100 bg-white/50 rounded-b-2xl"><div className="flex justify-between items-center"><span className="text-stone-600 font-bold">合計金額 (已選)</span><span className="text-2xl font-bold text-sage-600">{formatMoney(selectedTotal)}</span></div></div>
                     </div>
                 </div>
             );
@@ -875,10 +972,10 @@
             }, []);
             return (
                 <div className="fixed inset-0 bg-stone-800/40 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 fade-in">
-                    <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col border border-stone-100">
-                        <div className="p-5 border-b border-stone-100 flex justify-between items-center bg-sage-400 text-white rounded-t-2xl shadow-sm"><h3 className="font-bold text-lg"><i className="fa-solid fa-chart-line mr-2"></i>AI 記帳分析</h3><button onClick={onClose}><i className="fa-solid fa-xmark text-xl text-sage-50 hover:text-white"></i></button></div>
+                    <div className="bg-cream-50/95 backdrop-blur-xl rounded-2xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col border border-cream-100">
+                        <div className="p-5 border-b border-cream-100 flex justify-between items-center bg-sage-400 text-white rounded-t-2xl shadow-sm"><h3 className="font-bold text-lg"><i className="fa-solid fa-chart-line mr-2"></i>AI 記帳分析</h3><button onClick={onClose}><i className="fa-solid fa-xmark text-xl text-sage-50 hover:text-white"></i></button></div>
                         <div className="p-6 overflow-y-auto">{loading ? <div className="text-center py-8"><div className="loader mx-auto mb-4"></div><p className="text-stone-500">AI 分析中...</p></div> : <div className="prose prose-sm text-stone-600 whitespace-pre-wrap leading-relaxed markdown-content">{analysis}</div>}</div>
-                        <div className="p-4 border-t border-stone-100 bg-white rounded-b-2xl text-center"><button onClick={onClose} className="btn-primary py-2 text-sm shadow-sm">關閉</button></div>
+                        <div className="p-4 border-t border-cream-100 bg-white rounded-b-2xl text-center"><button onClick={onClose} className="btn-primary py-2 text-sm shadow-sm">關閉</button></div>
                     </div>
                 </div>
             );
@@ -892,13 +989,11 @@
                         <div key={item.id} onClick={() => onEdit(item)} className="card-soft flex justify-between items-center active:scale-[0.98] transition-transform p-4 cursor-pointer">
                             <div className="flex-1 min-w-0 pr-3">
                                 <div className="mb-2">
-                                    {/* Changed to Sage Green */}
                                     <span className="bg-sage-50 text-sage-600 px-2 py-0.5 rounded-md text-[10px] font-bold inline-block mb-1 tracking-wide uppercase">{item.category}</span>
                                     <div className="font-bold text-stone-700 text-base leading-snug break-words">{item.item || "未命名"}</div>
                                 </div>
                                 <div className="flex flex-col">
                                     <div className="flex items-baseline gap-2">
-                                        {/* Logic: If foreign currency, use text-lg (smaller). If TWD, use text-xl (original size). */}
                                         {item.currency !== 'TWD' ? (
                                             <span className="font-bold text-stone-800 text-lg tracking-tight">
                                                 {item.currency} {Number(item.foreignAmount).toLocaleString()}
@@ -1202,7 +1297,6 @@
                                 <label className="input-label ml-1">分類</label>
                                 <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 items-center">
                                     {categories.map(c => (
-                                        // Changed to Sage Green
                                         <button type="button" key={c} onClick={() => setForm({...form, category: c})} className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap border transition-all ${form.category === c ? 'bg-sage-400 text-white border-sage-400 shadow-sm transform scale-105' : 'bg-white text-stone-500 border-stone-200 hover:bg-stone-50'}`}>{c}</button>
                                     ))}
                                     {isAddingCat ? (
