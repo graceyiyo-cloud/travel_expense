@@ -476,42 +476,63 @@
             };
 
             const handleDeleteProject = () => {
-                const confirmMsg = `警告：您即將刪除整個專案「${tripId}」\n\n這將會：\n1. 刪除所有記帳資料\n2. 刪除自訂分類\n3. 無法復原\n\n您確定要繼續嗎？`;
+                const confirmMsg = `警告：您即將刪除整個專案「${tripId}」\n\n這將會：\n1. 刪除所有記帳資料\n2. 刪除自訂分類\n3. 從歷史紀錄中移除\n4. 無法復原\n\n您確定要繼續嗎？`;
                 showConfirm(confirmMsg, async () => {
                     // Double Confirm
                     const doubleCheck = prompt(`請輸入專案名稱「${tripId}」以確認刪除：`);
-                    if (doubleCheck !== tripId) {
+                    // Case insensitive check just in case, but strict is better for delete.
+                    // tripId is always UPPERCASE in this app logic, so we compare with that.
+                    if (!doubleCheck || doubleCheck.toUpperCase() !== tripId) {
                         showAlert("輸入不正確，已取消刪除。");
                         return;
                     }
 
+                    // Show loading overlay
+                    const loadingDiv = document.createElement('div');
+                    loadingDiv.id = 'delete-loading-overlay';
+                    loadingDiv.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(2px);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;color:white;font-weight:bold;';
+                    loadingDiv.innerHTML = '<div class="loader border-t-white border-white/30 mb-4 w-10 h-10 border-4"></div><div>正在徹底刪除資料...</div>';
+                    document.body.appendChild(loadingDiv);
+
                     try {
-                        // 1. Delete all documents in subcollection (Client-side implementation limitation: batch delete 500 at a time)
-                        // Note: For large collections, this should be done via Cloud Functions, but for client-side simple usage:
                         const ref = db.collection('artifacts').doc(appId)
                                       .collection('public').doc('data')
                                       .collection(`${tripId}_simple_v1`);
-                        const snapshot = await ref.get();
                         
-                        if (snapshot.empty) {
-                            // Empty collection
-                        } else {
+                        // 1. Delete all documents in subcollection using a loop to handle batches > 500
+                        let deletedCount = 0;
+                        while (true) {
+                            // Get a batch of documents
+                            const snapshot = await ref.limit(400).get();
+                            if (snapshot.empty) break;
+                            
                             const batch = db.batch();
                             snapshot.docs.forEach((doc) => {
                                 batch.delete(doc.ref);
                             });
                             await batch.commit();
+                            deletedCount += snapshot.size;
                         }
 
                         // 2. Clear LocalStorage Categories
                         localStorage.removeItem(`categories_${tripId}`);
                         
-                        // 3. Reset View
-                        showAlert("專案資料已全部刪除。", "刪除成功");
+                        // 3. Clear from Login History
+                        const currentHistory = JSON.parse(localStorage.getItem('login_history') || '[]');
+                        const newHistory = currentHistory.filter(h => h !== tripId);
+                        localStorage.setItem('login_history', JSON.stringify(newHistory));
+                        setLoginHistory(newHistory);
+                        
+                        // Remove loading overlay
+                        if(document.body.contains(loadingDiv)) document.body.removeChild(loadingDiv);
+
+                        // 4. Reset View
+                        showAlert(`專案已刪除 (共清除 ${deletedCount} 筆資料)。`, "刪除成功");
                         setView('login');
                         setTripId('');
                         setExpenses([]);
                     } catch (e) {
+                        if(document.body.contains(loadingDiv)) document.body.removeChild(loadingDiv);
                         showAlert("刪除專案失敗: " + e.message, "錯誤");
                     }
                 }, "危險操作");
