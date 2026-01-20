@@ -824,18 +824,18 @@
                         </div>
                         <div className="flex gap-1 bg-white/10 rounded-full p-1 backdrop-blur-sm">
                              {/* 搜尋按鈕 */}
-                             <button onClick={toggleSearch} className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${isSearchOpen ? 'bg-white text-sage-600' : 'hover:bg-white/20'}`} title="搜尋">
-                                <i className="fa-solid fa-magnifying-glass text-lg"></i>
+                             <button onClick={toggleSearch} className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isSearchOpen ? 'bg-white text-sage-600' : 'hover:bg-white/20'}`} title="搜尋">
+                                <i className="fa-solid fa-magnifying-glass text-sm"></i>
                             </button>
-                            <button onClick={onStats} className="w-9 h-9 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors" title="統計"><i className="fa-solid fa-chart-pie text-lg"></i></button>
-                            <button onClick={onAnalysis} className="w-9 h-9 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors" title="分析"><i className="fa-solid fa-wand-magic-sparkles text-lg text-yellow-100"></i></button>
+                            <button onClick={onStats} className="w-8 h-8 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors" title="統計"><i className="fa-solid fa-chart-pie text-sm"></i></button>
+                            <button onClick={onAnalysis} className="w-8 h-8 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors" title="分析"><i className="fa-solid fa-wand-magic-sparkles text-sm text-yellow-100"></i></button>
                             
                             {/* 刪除專案按鈕 */}
-                            <button onClick={onDeleteProject} className="w-9 h-9 rounded-full hover:bg-red-500/80 flex items-center justify-center transition-colors text-red-200 hover:text-white" title="刪除專案">
-                                <i className="fa-solid fa-trash-can text-lg"></i>
+                            <button onClick={onDeleteProject} className="w-8 h-8 rounded-full hover:bg-red-500/80 flex items-center justify-center transition-colors text-red-200 hover:text-white" title="刪除專案">
+                                <i className="fa-solid fa-trash-can text-sm"></i>
                             </button>
                             
-                            <button onClick={onLogout} className="w-9 h-9 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors" title="登出"><i className="fa-solid fa-arrow-right-from-bracket text-lg"></i></button>
+                            <button onClick={onLogout} className="w-8 h-8 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors" title="登出"><i className="fa-solid fa-arrow-right-from-bracket text-sm"></i></button>
                         </div>
                     </div>
                     <div className="overflow-x-auto no-scrollbar">
@@ -1083,29 +1083,42 @@
             return (
                 <div className="space-y-3 pb-24">
                     {expenses.map(item => (
-                        <div key={item.id} onClick={() => onEdit(item)} className="card-soft flex justify-between items-center active:scale-[0.98] transition-transform p-4 cursor-pointer">
-                            <div className="flex-1 min-w-0 pr-3">
-                                <div className="mb-2">
-                                    <span className="bg-sage-50 text-sage-600 px-2 py-0.5 rounded-md text-[10px] font-bold inline-block mb-1 tracking-wide uppercase">{item.category}</span>
-                                    <div className="font-bold text-stone-700 text-base leading-snug break-words">{item.item || "未命名"}</div>
+                        <div key={item.id} onClick={() => onEdit(item)} className="card-soft relative p-4 active:scale-[0.98] transition-transform cursor-pointer">
+                            {/* Delete Button (Top Right) */}
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); onDelete(item.id); }} 
+                                className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center text-stone-300 hover:bg-red-50 hover:text-red-500 rounded-full transition-colors z-10"
+                            >
+                                <i className="fa-solid fa-trash text-xs"></i>
+                            </button>
+
+                            <div className="flex flex-col gap-2">
+                                {/* Top Row: Category & Date */}
+                                <div className="flex items-center gap-2 pr-8"> {/* pr-8 to avoid overlap with delete btn */}
+                                    <span className="bg-sage-50 text-sage-600 px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wide uppercase">{item.category}</span>
+                                    <span className="text-[10px] text-stone-400 font-medium">{formatDateTime(item.createdAt?.seconds)}</span>
                                 </div>
-                                <div className="flex flex-col">
-                                    <div className="flex items-baseline gap-2">
-                                        {item.currency !== 'TWD' ? (
-                                            <span className="font-bold text-stone-800 text-lg tracking-tight">
-                                                {item.currency} {Number(item.foreignAmount).toLocaleString()}
-                                            </span>
-                                        ) : (
-                                            <span className="font-bold text-stone-800 text-xl tracking-tight">
-                                                {formatMoney(item.twdAmount)}
-                                            </span>
-                                        )}
+
+                                {/* Middle Row: Item Name & Amount */}
+                                <div className="flex justify-between items-start">
+                                    <div className="font-bold text-stone-700 text-base leading-snug break-words flex-1 pr-2">{item.item || "未命名"}</div>
+                                    
+                                    <div className="flex flex-col items-end flex-shrink-0">
+                                        <div className="flex items-baseline gap-1">
+                                            {item.currency !== 'TWD' ? (
+                                                <span className="font-bold text-stone-800 text-lg tracking-tight">
+                                                    {item.currency} {Number(item.foreignAmount).toLocaleString()}
+                                                </span>
+                                            ) : (
+                                                <span className="font-bold text-stone-800 text-xl tracking-tight">
+                                                    {formatMoney(item.twdAmount)}
+                                                </span>
+                                            )}
+                                        </div>
                                         {item.currency !== 'TWD' && <span className="text-xs text-stone-400 font-medium">≈ NT$ {Number(item.twdAmount).toLocaleString()}</span>}
                                     </div>
-                                    <div className="text-[10px] text-stone-400 mt-1 font-medium">{formatDateTime(item.createdAt?.seconds)}</div>
                                 </div>
                             </div>
-                            <button onClick={(e) => { e.stopPropagation(); onDelete(item.id); }} className="w-10 h-10 rounded-full flex items-center justify-center text-stone-300 hover:bg-red-50 hover:text-red-500 transition-colors flex-shrink-0"><i className="fa-solid fa-trash"></i></button>
                         </div>
                     ))}
                 </div>
