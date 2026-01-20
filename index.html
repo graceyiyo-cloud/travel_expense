@@ -1252,8 +1252,7 @@
                         1. 請將所有商品名稱翻譯成「繁體中文」。
                         2. 請同時辨識「商店名稱」。
                         3. **若品項有對應的折扣或優惠，請直接計算並列出「折後金額」，不要將折扣分開列出。**
-                           (例如：商品A原價1000，折扣200，請直接回傳商品A金額為800)。
-                        4. 只有無法歸屬特定商品的整單折扣，才列為單獨的負數項目。
+                        4. **若有「整單合計的折扣」無法歸屬單一品項，請務必列為單獨項目，金額標記為負數。**
                         請回傳一個 JSON 物件，格式如下 (不要用Markdown):
                         {
                             "store": "商店名稱(例如: 7-11, Uniqlo)",
@@ -1299,9 +1298,24 @@
                         setTimeout(() => {
                             if (result.items && result.items.length > 0) {
                                 const storeName = result.store ? ` (@${result.store})` : '';
-                                const mappedItems = result.items.map(i => ({
-                                    ...i, name: i.name + storeName, category: categories.includes(i.category) ? i.category : '購物'
-                                }));
+                                
+                                // Modified mapping logic with category inheritance
+                                const mappedItems = [];
+                                result.items.forEach((i) => {
+                                    let cat = categories.includes(i.category) ? i.category : '購物';
+                                    
+                                    // Logic: If it is a discount (amount < 0) and we have previous items, use the last item's category
+                                    if (Number(i.amount) < 0 && mappedItems.length > 0) {
+                                        cat = mappedItems[mappedItems.length - 1].category;
+                                    }
+
+                                    mappedItems.push({
+                                        ...i,
+                                        name: i.name + storeName,
+                                        category: cat
+                                    });
+                                });
+
                                 setScannedItems(mappedItems);
                                 setSelectedIndices(new Set(result.items.map((_, i) => i)));
                                 if (result.currency) setScanSettings(prev => ({ ...prev, currency: result.currency, exchangeRate: rate }));
