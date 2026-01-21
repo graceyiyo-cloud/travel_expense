@@ -20,28 +20,9 @@
             theme: {
                 extend: {
                     colors: {
-                        cream: {
-                            50: '#fffbf0', // Lighter cream
-                            100: '#fffdf5',
-                            200: '#fff8e1', // Butter
-                            300: '#ffecb3',
-                            400: '#ffe082',
-                        },
-                        sage: {
-                            50: '#f4f7f4',
-                            100: '#e3ebe3',
-                            200: '#c5d6c6',
-                            300: '#9db89f',
-                            400: '#769679', // Primary Artsy Green
-                            500: '#5a7a5d',
-                            600: '#466149',
-                            700: '#3a4e3c',
-                            800: '#314033',
-                            900: '#2a352b',
-                        },
-                        stone: {
-                            850: '#1c1917',
-                        }
+                        cream: { 50: '#fffbf0', 100: '#fffdf5', 200: '#fff8e1', 300: '#ffecb3', 400: '#ffe082' },
+                        sage: { 50: '#f4f7f4', 100: '#e3ebe3', 200: '#c5d6c6', 300: '#9db89f', 400: '#769679', 500: '#5a7a5d', 600: '#466149', 700: '#3a4e3c', 800: '#314033', 900: '#2a352b' },
+                        stone: { 850: '#1c1917' }
                     }
                 }
             }
@@ -49,178 +30,44 @@
     </script>
 
     <style>
-        /* Creamy Butter Background */
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            background-color: #fefce8; /* Tailwind yellow-50 base */
-            color: #44403c; 
-            -webkit-tap-highlight-color: transparent;
-        } 
-        
-        /* Container styling */
-        .mobile-container { 
-            max-width: 600px; 
-            margin: 0 auto; 
-            min-height: 100vh; 
-            background-color: #fffdf7; /* Warm creamy white */
-            position: relative; 
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.05); 
-            display: flex;
-            flex-direction: column;
-            padding-bottom: 100px;
-            border-left: 1px solid #fef3c7;
-            border-right: 1px solid #fef3c7;
-        }
-        
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #fefce8; color: #44403c; -webkit-tap-highlight-color: transparent; } 
+        .mobile-container { max-width: 600px; margin: 0 auto; min-height: 100vh; background-color: #fffdf7; position: relative; box-shadow: 0 0 20px rgba(0, 0, 0, 0.05); display: flex; flex-direction: column; padding-bottom: 100px; border-left: 1px solid #fef3c7; border-right: 1px solid #fef3c7; }
         .input-label { display: block; font-size: 0.85rem; color: #78716c; margin-bottom: 6px; font-weight: 500; letter-spacing: 0.02em; }
-        
-        .input-field { 
-            width: 100%; 
-            padding: 12px; 
-            border: 1px solid #e7e5e4; 
-            border-radius: 8px; 
-            font-size: 1rem; 
-            transition: all 0.2s; 
-            -webkit-appearance: none; 
-            background: #fff; 
-            color: #44403c;
-        }
-        .input-field:focus { 
-            border-color: #769679; 
-            outline: none; 
-            background: white;
-            box-shadow: 0 0 0 2px rgba(118, 150, 121, 0.1); 
-        } 
+        .input-field { width: 100%; padding: 12px; border: 1px solid #e7e5e4; border-radius: 8px; font-size: 1rem; transition: all 0.2s; -webkit-appearance: none; background: #fff; color: #44403c; }
+        .input-field:focus { border-color: #769679; outline: none; background: white; box-shadow: 0 0 0 2px rgba(118, 150, 121, 0.1); } 
         .input-field::placeholder { color: #d6d3d1; }
-        
         .input-sm { padding: 8px; font-size: 0.9rem; }
-        
-        .btn-primary { 
-            background-color: #769679; 
-            color: white; 
-            padding: 12px; 
-            border-radius: 8px; 
-            width: 100%; 
-            font-weight: 500; 
-            text-align: center; 
-            box-shadow: 0 2px 5px rgba(118, 150, 121, 0.2); 
-            transition: all 0.2s; 
-            border: none;
-            letter-spacing: 0.02em;
-        }
+        .btn-primary { background-color: #769679; color: white; padding: 12px; border-radius: 8px; width: 100%; font-weight: 500; text-align: center; box-shadow: 0 2px 5px rgba(118, 150, 121, 0.2); transition: all 0.2s; border: none; letter-spacing: 0.02em; }
         .btn-primary:active { transform: translateY(1px); background-color: #5a7a5d; box-shadow: none; }
-        
-        .btn-secondary { 
-            background: white; 
-            color: #57534e; 
-            padding: 12px; 
-            border-radius: 8px; 
-            width: 100%; 
-            font-weight: 500; 
-            text-align: center; 
-            border: 1px solid #e7e5e4; 
-            box-shadow: 0 1px 2px rgba(0,0,0,0.02); 
-        }
-        .btn-danger { background-color: #ef4444; color: white; padding: 12px; border-radius: 8px; width: 100%; font-weight: 500; text-align: center; }
-        
-        /* Updated Card Style: More distinct border and shadow */
-        .card-soft {
-            background: white;
-            border-radius: 12px;
-            border: 1px solid #e7e5e4;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.03); 
-        }
-
+        .btn-secondary { background: white; color: #57534e; padding: 12px; border-radius: 8px; width: 100%; font-weight: 500; text-align: center; border: 1px solid #e7e5e4; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+        .card-soft { background: white; border-radius: 12px; border: 1px solid #e7e5e4; box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
         .loader { border: 3px solid #e7e5e4; border-radius: 50%; border-top: 3px solid #769679; width: 20px; height: 20px; -webkit-animation: spin 1s linear infinite; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
         .custom-checkbox { width: 20px; height: 20px; accent-color: #769679; flex-shrink: 0; }
         .markdown-content p { margin-bottom: 0.5em; }
         .stat-bar-bg { background-color: #f5f5f4; border-radius: 9999px; height: 6px; width: 100%; overflow: hidden; }
         .stat-bar-fill { height: 100%; border-radius: 9999px; background-color: #769679; transition: width 0.5s ease-in-out; }
-        
-        .header-solid {
-            background-color: #769679;
-        }
-        
-        .fab-container {
-            position: fixed;
-            bottom: 2rem;
-            left: 0;
-            right: 0;
-            z-index: 50;
-            pointer-events: none;
-            display: flex;
-            justify-content: center;
-        }
-        .fab-wrapper {
-            width: 100%;
-            max-width: 600px;
-            padding: 0 1.5rem;
-            display: flex;
-            justify-content: flex-end;
-        }
-        .fab-btn {
-            pointer-events: auto;
-            width: 3.5rem;
-            height: 3.5rem;
-            border-radius: 50%;
-            background-color: #769679;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            box-shadow: 0 4px 10px rgba(118, 150, 121, 0.4);
-            border: 2px solid white;
-            transition: all 0.2s;
-        }
+        .header-solid { background-color: #769679; }
+        .fab-container { position: fixed; bottom: 2rem; left: 0; right: 0; z-index: 50; pointer-events: none; display: flex; justify-content: center; }
+        .fab-wrapper { width: 100%; max-width: 600px; padding: 0 1.5rem; display: flex; justify-content: flex-end; }
+        .fab-btn { pointer-events: auto; width: 3.5rem; height: 3.5rem; border-radius: 50%; background-color: #769679; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; box-shadow: 0 4px 10px rgba(118, 150, 121, 0.4); border: 2px solid white; transition: all 0.2s; }
         .fab-btn:active { transform: scale(0.95); background-color: #5a7a5d; }
-
-        /* Progress Bar Animation */
-        @keyframes progress-stripe {
-            0% { background-position: 1rem 0; }
-            100% { background-position: 0 0; }
-        }
-
-        /* Sortable ghost class - Insertion Line Style */
-        .sortable-ghost {
-            opacity: 1;
-            background-color: #769679; /* Sage 400 */
-            height: 4px;
-            padding: 0 !important;
-            margin: 8px 0;
-            border: none;
-            border-radius: 2px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        /* Hide children of ghost to just show the bar */
-        .sortable-ghost > * {
-            display: none !important;
-        }
+        .sortable-ghost { opacity: 1; background-color: #769679; height: 4px; padding: 0 !important; margin: 8px 0; border: none; border-radius: 2px; overflow: hidden; }
+        .sortable-ghost > * { display: none !important; }
+        .sortable-drag { cursor: grabbing; opacity: 1; background: white; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); transform: scale(1.02); z-index: 10; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-slide-down { animation: slideDown 0.3s ease-out forwards; }
         
-        /* Dragging State - Lifted Effect */
-        .sortable-drag {
-            cursor: grabbing;
-            opacity: 1;
-            background: white;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            transform: scale(1.02);
-            z-index: 10;
-        }
-
-        /* Animations */
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-slide-down {
-            animation: slideDown 0.3s ease-out forwards;
-        }
+        /* Calculator Styles */
+        .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .calc-btn { background: white; border: 1px solid #e7e5e4; border-radius: 12px; height: 50px; font-size: 1.25rem; font-weight: 500; color: #44403c; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all 0.1s; }
+        .calc-btn:active { transform: scale(0.95); background-color: #f5f5f4; }
+        .calc-btn.op { background-color: #f0fdf4; color: #466149; font-weight: bold; border-color: #dcfce7; }
+        .calc-btn.eq { background-color: #769679; color: white; grid-column: span 1; border-color: #769679; }
+        .calc-btn.ok { background-color: #769679; color: white; grid-column: span 2; border-color: #769679; font-size: 1rem; font-weight: bold; }
+        .calc-display { background: #f5f5f4; border-radius: 12px; padding: 15px; text-align: right; font-size: 1.75rem; font-family: monospace; font-weight: bold; color: #44403c; margin-bottom: 15px; white-space: nowrap; overflow-x: auto; border: 1px solid #e7e5e4; }
     </style>
 </head>
 <body>
@@ -257,76 +104,28 @@
 
         // --- 3. 輔助功能 ---
         const formatMoney = (amount, currency = 'TWD') => {
-            if (currency === 'TWD') {
-                return `NT$ ${new Intl.NumberFormat('zh-TW', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount)}`;
-            }
-            return new Intl.NumberFormat('zh-TW', { 
-                style: 'currency', 
-                currency: currency, 
-                minimumFractionDigits: 0, 
-                maximumFractionDigits: 2 
-            }).format(amount);
+            if (currency === 'TWD') return `NT$ ${new Intl.NumberFormat('zh-TW', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount)}`;
+            return new Intl.NumberFormat('zh-TW', { style: 'currency', currency: currency, minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(amount);
         };
 
         const formatDateTime = (seconds) => {
             if (!seconds) return '';
             const date = new Date(seconds * 1000);
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            return `${year}/${month}/${day} ${hours}:${minutes}`;
+            return `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
         };
 
-        // Hook for drag-to-scroll and wheel-to-scroll
         const useDraggableScroll = (ref) => {
             React.useEffect(() => {
                 const el = ref.current;
                 if (!el) return;
-                
-                // Drag State
-                let isDown = false;
-                let startX;
-                let scrollLeft;
-
-                const onMouseDown = (e) => {
-                    isDown = true;
-                    startX = e.pageX - el.offsetLeft;
-                    scrollLeft = el.scrollLeft;
-                };
+                let isDown = false, startX, scrollLeft;
+                const onMouseDown = (e) => { isDown = true; startX = e.pageX - el.offsetLeft; scrollLeft = el.scrollLeft; };
                 const onMouseLeave = () => { isDown = false; };
                 const onMouseUp = () => { isDown = false; };
-                const onMouseMove = (e) => {
-                    if (!isDown) return;
-                    e.preventDefault();
-                    const x = e.pageX - el.offsetLeft;
-                    const walk = (x - startX) * 2; // Scroll speed multiplier
-                    el.scrollLeft = scrollLeft - walk;
-                };
-                
-                // Wheel Logic (Horizontal scroll with vertical wheel)
-                const onWheel = (e) => {
-                    // Check if it's a vertical scroll (deltaY) and map it to horizontal scroll
-                    if (e.deltaY !== 0) {
-                        e.preventDefault(); // Prevent page scroll
-                        el.scrollLeft += e.deltaY;
-                    }
-                };
-
-                el.addEventListener('mousedown', onMouseDown);
-                el.addEventListener('mouseleave', onMouseLeave);
-                el.addEventListener('mouseup', onMouseUp);
-                el.addEventListener('mousemove', onMouseMove);
-                el.addEventListener('wheel', onWheel);
-
-                return () => {
-                    el.removeEventListener('mousedown', onMouseDown);
-                    el.removeEventListener('mouseleave', onMouseLeave);
-                    el.removeEventListener('mouseup', onMouseUp);
-                    el.removeEventListener('mousemove', onMouseMove);
-                    el.removeEventListener('wheel', onWheel);
-                };
+                const onMouseMove = (e) => { if (!isDown) return; e.preventDefault(); const x = e.pageX - el.offsetLeft; const walk = (x - startX) * 2; el.scrollLeft = scrollLeft - walk; };
+                const onWheel = (e) => { if (e.deltaY !== 0) { e.preventDefault(); el.scrollLeft += e.deltaY; } };
+                el.addEventListener('mousedown', onMouseDown); el.addEventListener('mouseleave', onMouseLeave); el.addEventListener('mouseup', onMouseUp); el.addEventListener('mousemove', onMouseMove); el.addEventListener('wheel', onWheel);
+                return () => { el.removeEventListener('mousedown', onMouseDown); el.removeEventListener('mouseleave', onMouseLeave); el.removeEventListener('mouseup', onMouseUp); el.removeEventListener('mousemove', onMouseMove); el.removeEventListener('wheel', onWheel); };
             }, [ref]);
         };
 
@@ -341,18 +140,19 @@
             const [loginHistory, setLoginHistory] = React.useState([]);
             const [filterCategory, setFilterCategory] = React.useState('All');
             const [searchTerm, setSearchTerm] = React.useState(''); 
-            const [showSearchBar, setShowSearchBar] = React.useState(false); // 控制搜尋列顯示
+            const [showSearchBar, setShowSearchBar] = React.useState(false); 
             
-            // Custom Dialog States - Enhanced to support 'prompt'
             const [dialog, setDialog] = React.useState({ show: false, type: 'alert', title: '', msg: '', onConfirm: null });
-            const [promptValue, setPromptValue] = React.useState(''); // For prompt input
+            const [promptValue, setPromptValue] = React.useState(''); 
             
             // Modals
             const [showAnalysis, setShowAnalysis] = React.useState(false);
             const [showStats, setShowStats] = React.useState(false);
             const [showCatManager, setShowCatManager] = React.useState(false);
-            
-            // Categories now depend on tripId, initialized with defaults but will be overwritten by DB/Local
+            const [showCalculator, setShowCalculator] = React.useState(false); // New Calculator State
+            const [calculatorCallback, setCalculatorCallback] = React.useState(null); // Callback for calculator result
+            const [currentCalcValue, setCurrentCalcValue] = React.useState('');
+
             const [categories, setCategories] = React.useState(defaultCategories);
 
             React.useEffect(() => {
@@ -364,51 +164,34 @@
                 } catch(e) { console.error("Error loading history", e); }
             }, []);
 
-            // NEW: Load expenses and CATEGORIES from Firestore when tripId changes
             React.useEffect(() => {
                 if (!user || !tripId) return;
-
-                // 1. Load Categories (Priority: Firestore > LocalStorage > Default)
-                const settingsRef = db.collection('artifacts').doc(appId)
-                                      .collection('public').doc('data')
-                                      .collection('trip_settings').doc(tripId);
-
+                const settingsRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('trip_settings').doc(tripId);
                 const unsubCats = settingsRef.onSnapshot(doc => {
                     if (doc.exists && doc.data().categories) {
-                        // Found in DB, use it and update local cache
                         const remoteCats = doc.data().categories;
                         setCategories(remoteCats);
                         localStorage.setItem(`categories_${tripId}`, JSON.stringify(remoteCats));
                     } else {
-                        // Not found in DB, check local storage (migration from old version)
                         const savedCats = localStorage.getItem(`categories_${tripId}`);
                         if (savedCats) {
                             const parsedCats = JSON.parse(savedCats);
                             setCategories(parsedCats);
-                            // Auto-migrate to DB so it persists next time
                             settingsRef.set({ categories: parsedCats }, { merge: true });
                         } else {
-                            // First time ever, use defaults and save to DB
                             setCategories(defaultCategories);
                             settingsRef.set({ categories: defaultCategories }, { merge: true });
                         }
                     }
                 });
 
-                // 2. Load Expenses
-                const ref = db.collection('artifacts').doc(appId)
-                              .collection('public').doc('data')
-                              .collection(`${tripId}_simple_v1`);
-                              
+                const ref = db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`${tripId}_simple_v1`);
                 const unsubExp = ref.orderBy('createdAt', 'asc').onSnapshot(snap => {
                     const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                     setExpenses(data);
                 });
 
-                return () => {
-                    unsubCats();
-                    unsubExp();
-                };
+                return () => { unsubCats(); unsubExp(); };
             }, [user, tripId]);
 
             const showAlert = (msg, title = "提示") => {
@@ -416,31 +199,12 @@
             };
 
             const showConfirm = (msg, onConfirm, title = "確認") => {
-                setDialog({ 
-                    show: true, 
-                    type: 'confirm', 
-                    title, 
-                    msg, 
-                    onConfirm: () => {
-                        // Close dialog FIRST, then run logic to avoid state conflicts if logic opens another dialog
-                        setDialog(prev => ({...prev, show: false}));
-                        setTimeout(() => onConfirm(), 50);
-                    }
-                });
+                setDialog({ show: true, type: 'confirm', title, msg, onConfirm: () => { setDialog(prev => ({...prev, show: false})); setTimeout(() => onConfirm(), 50); } });
             };
 
             const showPrompt = (msg, onConfirm, title = "輸入") => {
-                setPromptValue(''); // Reset value
-                setDialog({
-                    show: true,
-                    type: 'prompt', // New type
-                    title,
-                    msg,
-                    onConfirm: (val) => {
-                        setDialog(prev => ({...prev, show: false}));
-                        setTimeout(() => onConfirm(val), 50);
-                    }
-                });
+                setPromptValue(''); 
+                setDialog({ show: true, type: 'prompt', title, msg, onConfirm: (val) => { setDialog(prev => ({...prev, show: false})); setTimeout(() => onConfirm(val), 50); } });
             };
 
             const handleLogin = (code, key) => {
@@ -454,16 +218,14 @@
                     localStorage.setItem('gemini_api_key', cleanKey);
                 }
                 
-                // Update History only if valid login
                 const newHistory = [upperCode, ...loginHistory.filter(h => h !== upperCode)].slice(0, 5);
                 setLoginHistory(newHistory);
                 localStorage.setItem('login_history', JSON.stringify(newHistory));
-
                 setView('list');
             };
 
             const handleDeleteHistory = (e, codeToDelete) => {
-                e.stopPropagation(); // 阻止點擊觸發登入
+                e.stopPropagation(); 
                 const newHistory = loginHistory.filter(h => h !== codeToDelete);
                 setLoginHistory(newHistory);
                 localStorage.setItem('login_history', JSON.stringify(newHistory));
@@ -471,65 +233,33 @@
 
             const handleUpdateKey = (newKey) => {
                 if (newKey && newKey.trim() !== '') {
-                    const cleanKey = newKey.trim();
-                    setApiKey(cleanKey);
-                    localStorage.setItem('gemini_api_key', cleanKey);
+                    setApiKey(newKey.trim());
+                    localStorage.setItem('gemini_api_key', newKey.trim());
                     return true;
                 }
                 return false;
             };
 
-            // Helper to save categories to both State, LocalStorage and Firestore
             const saveCategoriesToDb = async (newCats) => {
-                setCategories(newCats); // Optimistic UI update
-                localStorage.setItem(`categories_${tripId}`, JSON.stringify(newCats)); // Local backup
-                
+                setCategories(newCats); 
+                localStorage.setItem(`categories_${tripId}`, JSON.stringify(newCats)); 
                 if (tripId && appId) {
-                    try {
-                        await db.collection('artifacts').doc(appId)
-                                .collection('public').doc('data')
-                                .collection('trip_settings').doc(tripId)
-                                .set({ categories: newCats }, { merge: true });
-                    } catch(e) {
-                        console.error("Error saving categories to DB", e);
-                    }
+                    try { await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('trip_settings').doc(tripId).set({ categories: newCats }, { merge: true }); } catch(e) { console.error(e); }
                 }
             };
 
-            const handleAddCategory = (newCat) => {
-                if (!newCat) return;
-                if (!categories.includes(newCat)) {
-                    const newCategories = [...categories, newCat];
-                    saveCategoriesToDb(newCategories);
-                }
-            };
-
-            const handleReorderCategories = (newCategories) => {
-                saveCategoriesToDb(newCategories);
-            };
+            const handleAddCategory = (newCat) => { if (!newCat) return; if (!categories.includes(newCat)) saveCategoriesToDb([...categories, newCat]); };
+            const handleReorderCategories = (newCategories) => saveCategoriesToDb(newCategories);
 
             const handleEditCategory = async (oldName, newName) => {
                 if (!newName || newName === oldName) return;
-                const newCats = categories.map(c => c === oldName ? newName : c);
-                saveCategoriesToDb(newCats);
-
-                // Update existing expenses (Batch update)
+                saveCategoriesToDb(categories.map(c => c === oldName ? newName : c));
                 const batch = db.batch();
                 const relatedExpenses = expenses.filter(e => e.category === oldName);
                 if (relatedExpenses.length > 0) {
-                    const ref = db.collection('artifacts').doc(appId)
-                                      .collection('public').doc('data')
-                                      .collection(`${tripId}_simple_v1`);
-                    relatedExpenses.forEach(exp => {
-                        const docRef = ref.doc(exp.id);
-                        batch.update(docRef, { category: newName });
-                    });
-                    try {
-                        await batch.commit();
-                        showAlert(`已將 ${relatedExpenses.length} 筆資料分類更新為「${newName}」`, "更新成功");
-                    } catch(e) {
-                        showAlert("分類更新失敗：" + e.message, "錯誤");
-                    }
+                    const ref = db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`${tripId}_simple_v1`);
+                    relatedExpenses.forEach(exp => batch.update(ref.doc(exp.id), { category: newName }));
+                    try { await batch.commit(); showAlert(`已更新 ${relatedExpenses.length} 筆資料分類`, "成功"); } catch(e) { showAlert("更新失敗", "錯誤"); }
                 }
             };
 
@@ -540,248 +270,181 @@
                     saveCategoriesToDb(newCats);
                     if (filterCategory === catToDelete) setFilterCategory('All');
                 };
+                if (count > 0) showConfirm(`類別「${catToDelete}」還有 ${count} 筆資料，確定刪除？`, deleteLogic, "刪除確認");
+                else showConfirm(`確定要刪除分類「${catToDelete}」嗎？`, deleteLogic, "刪除確認");
+            };
 
-                if (count > 0) {
-                    showConfirm(`警告：類別「${catToDelete}」下還有 ${count} 筆資料。\n\n刪除後這些資料將保留，但分類可能會顯示異常。\n確定要刪除嗎？`, deleteLogic, "刪除確認");
-                } else {
-                    showConfirm(`確定要刪除分類「${catToDelete}」嗎？`, deleteLogic, "刪除確認");
-                }
+            const handleRenameProject = () => {
+                showPrompt(`請輸入新的專案名稱：\n(注意：這將會把目前「${tripId}」的所有資料搬移到新名稱)`, async (newName) => {
+                    if (!newName || newName.trim() === '') return;
+                    const newId = newName.toUpperCase().trim();
+                    if (newId === tripId) return;
+
+                    const loadingDiv = document.createElement('div');
+                    loadingDiv.id = 'rename-loading';
+                    loadingDiv.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(2px);z-index:9999;display:flex;align-items:center;justify-content:center;color:white;flex-direction:column;font-weight:bold;';
+                    loadingDiv.innerHTML = '<div class="loader mb-2 border-white border-t-transparent"></div><div>正在搬移資料...</div>';
+                    document.body.appendChild(loadingDiv);
+
+                    try {
+                        const oldRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`${tripId}_simple_v1`);
+                        const newRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`${newId}_simple_v1`);
+                        const settingsRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('trip_settings');
+
+                        // 1. Move Expenses
+                        const snapshot = await oldRef.get();
+                        const batch = db.batch();
+                        let opCount = 0;
+                        const batches = []; 
+                        
+                        // Copy to new
+                        for (const doc of snapshot.docs) {
+                            batch.set(newRef.doc(doc.id), doc.data());
+                            batch.delete(oldRef.doc(doc.id)); // Delete old
+                            opCount++;
+                             if (opCount >= 200) { // Firestore limit is 500, play safe
+                                batches.push(batch.commit());
+                                opCount = 0;
+                            }
+                        }
+                        if (opCount > 0) batches.push(batch.commit());
+                        await Promise.all(batches);
+
+                        // 2. Move Settings
+                        const oldSettings = await settingsRef.doc(tripId).get();
+                        if (oldSettings.exists) {
+                            await settingsRef.doc(newId).set(oldSettings.data());
+                            await settingsRef.doc(tripId).delete();
+                        }
+
+                        // 3. Update Local State
+                        const oldHistory = JSON.parse(localStorage.getItem('login_history') || '[]');
+                        const newHistory = [newId, ...oldHistory.filter(h => h !== tripId && h !== newId)].slice(0, 5);
+                        localStorage.setItem('login_history', JSON.stringify(newHistory));
+                        setLoginHistory(newHistory);
+                        setTripId(newId);
+                        
+                        showAlert(`專案已更名為「${newId}」`, "成功");
+                    } catch (e) {
+                        console.error(e);
+                        showAlert("更名失敗: " + e.message, "錯誤");
+                    } finally {
+                        if(document.body.contains(loadingDiv)) document.body.removeChild(loadingDiv);
+                    }
+                }, "修改專案名稱");
             };
 
             const handleSave = async (data) => {
                 try {
-                    const ref = db.collection('artifacts').doc(appId)
-                                      .collection('public').doc('data')
-                                      .collection(`${tripId}_simple_v1`);
-                    if (data.id) {
-                        const { id, ...updateData } = data;
-                        await ref.doc(id).update(updateData);
-                    } else {
-                        await ref.add({ 
-                            ...data, 
-                            createdAt: firebase.firestore.FieldValue.serverTimestamp() 
-                        });
-                    }
-                    setView('list');
-                    setEditItem(null);
-                } catch (e) {
-                    showAlert("儲存失敗: " + e.message, "錯誤");
-                }
+                    const ref = db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`${tripId}_simple_v1`);
+                    if (data.id) { const { id, ...updateData } = data; await ref.doc(id).update(updateData); }
+                    else { await ref.add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); }
+                    setView('list'); setEditItem(null);
+                } catch (e) { showAlert("儲存失敗: " + e.message, "錯誤"); }
             };
 
             const handleBatchSave = async (items) => {
                 try {
-                    const ref = db.collection('artifacts').doc(appId)
-                                      .collection('public').doc('data')
-                                      .collection(`${tripId}_simple_v1`);
-                    const promises = items.map(item => {
-                        return ref.add({
-                            ...item,
-                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                    });
+                    const ref = db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`${tripId}_simple_v1`);
+                    const promises = items.map(item => ref.add({ ...item, createdAt: firebase.firestore.FieldValue.serverTimestamp() }));
                     await Promise.all(promises);
-                    showAlert(`成功儲存 ${items.length} 筆資料！`, "完成");
-                    setView('list');
-                    setEditItem(null);
-                } catch (e) {
-                    showAlert("批次儲存失敗: " + e.message, "錯誤");
-                }
+                    showAlert(`成功儲存 ${items.length} 筆資料！`, "完成"); setView('list'); setEditItem(null);
+                } catch (e) { showAlert("批次儲存失敗: " + e.message, "錯誤"); }
             };
 
             const handleDelete = (id) => {
                 showConfirm("確定要刪除這筆資料嗎？此動作無法復原。", async () => {
-                    try {
-                        await db.collection('artifacts').doc(appId)
-                            .collection('public').doc('data')
-                            .collection(`${tripId}_simple_v1`)
-                            .doc(id).delete();
-                    } catch(e) {
-                        showAlert("刪除失敗: " + e.message);
-                    }
+                    try { await db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`${tripId}_simple_v1`).doc(id).delete(); }
+                    catch(e) { showAlert("刪除失敗: " + e.message); }
                 }, "刪除資料");
             };
 
             const handleDeleteProject = () => {
-                const confirmMsg = `警告：您即將刪除整個專案「${tripId}」\n\n這將會：\n1. 刪除所有記帳資料\n2. 刪除自訂分類\n3. 從歷史紀錄中移除\n4. 無法復原\n\n您確定要繼續嗎？`;
-                
-                showConfirm(confirmMsg, () => {
-                    // 使用 showPrompt 替代 window.prompt
+                showConfirm(`警告：您即將刪除整個專案「${tripId}」\n資料將無法復原，確定嗎？`, () => {
                     showPrompt(`請輸入專案名稱「${tripId}」以確認刪除：`, async (doubleCheck) => {
-                        if (!doubleCheck || doubleCheck.toUpperCase() !== tripId) {
-                            showAlert("輸入不正確，已取消刪除。");
-                            return;
-                        }
-
-                        // Show loading overlay
-                        const loadingDiv = document.createElement('div');
-                        loadingDiv.id = 'delete-loading-overlay';
-                        loadingDiv.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(2px);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;color:white;font-weight:bold;';
-                        loadingDiv.innerHTML = '<div class="loader border-t-white border-white/30 mb-4 w-10 h-10 border-4"></div><div>正在徹底刪除資料...</div>';
-                        document.body.appendChild(loadingDiv);
-
+                        if (!doubleCheck || doubleCheck.toUpperCase() !== tripId) return showAlert("輸入不正確，已取消刪除。");
                         try {
-                            const ref = db.collection('artifacts').doc(appId)
-                                          .collection('public').doc('data')
-                                          .collection(`${tripId}_simple_v1`);
+                            const ref = db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`${tripId}_simple_v1`);
+                            const snapshot = await ref.limit(400).get(); // Simple batch delete
+                            const batch = db.batch();
+                            snapshot.docs.forEach((doc) => batch.delete(doc.ref));
+                            await batch.commit();
+                            await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('trip_settings').doc(tripId).delete();
                             
-                            // 1. Delete all documents in subcollection using a loop
-                            let deletedCount = 0;
-                            while (true) {
-                                // Get a batch of documents
-                                const snapshot = await ref.limit(400).get();
-                                if (snapshot.empty) break;
-                                
-                                const batch = db.batch();
-                                snapshot.docs.forEach((doc) => {
-                                    batch.delete(doc.ref);
-                                });
-                                await batch.commit();
-                                deletedCount += snapshot.size;
-                            }
-
-                            // 2. Delete Settings from DB
-                            await db.collection('artifacts').doc(appId)
-                                    .collection('public').doc('data')
-                                    .collection('trip_settings').doc(tripId)
-                                    .delete();
-
-                            // 3. Clear LocalStorage Categories
-                            localStorage.removeItem(`categories_${tripId}`);
-                            
-                            // 4. Clear from Login History
-                            const currentHistory = JSON.parse(localStorage.getItem('login_history') || '[]');
-                            const newHistory = currentHistory.filter(h => h !== tripId);
+                            const newHistory = loginHistory.filter(h => h !== tripId);
                             localStorage.setItem('login_history', JSON.stringify(newHistory));
                             setLoginHistory(newHistory);
-                            
-                            // Remove loading overlay
-                            if(document.body.contains(loadingDiv)) document.body.removeChild(loadingDiv);
-
-                            // 5. Reset View
-                            showAlert(`專案已刪除 (共清除 ${deletedCount} 筆資料)。`, "刪除成功");
-                            setView('login');
-                            setTripId('');
-                            setExpenses([]);
-                        } catch (e) {
-                            if(document.body.contains(loadingDiv)) document.body.removeChild(loadingDiv);
-                            showAlert("刪除專案失敗: " + e.message, "錯誤");
-                        }
+                            setView('login'); setTripId(''); setExpenses([]);
+                            showAlert("專案已刪除", "完成");
+                        } catch (e) { showAlert("刪除失敗: " + e.message); }
                     }, "危險操作");
                 }, "危險操作");
             };
 
-            // Enhanced Filter Logic with Search
             const filteredExpenses = React.useMemo(() => {
                 let result = expenses;
-                // Category Filter
-                if (filterCategory !== 'All') {
-                    result = result.filter(e => e.category === filterCategory);
-                }
-                // Search Filter
+                if (filterCategory !== 'All') result = result.filter(e => e.category === filterCategory);
                 if (searchTerm.trim()) {
                     const lowerTerm = searchTerm.toLowerCase().trim();
-                    result = result.filter(e => 
-                        (e.item || '').toLowerCase().includes(lowerTerm) || 
-                        String(e.twdAmount || '').includes(lowerTerm) ||
-                        String(e.foreignAmount || '').includes(lowerTerm)
-                    );
+                    result = result.filter(e => (e.item || '').toLowerCase().includes(lowerTerm) || String(e.twdAmount || '').includes(lowerTerm) || String(e.foreignAmount || '').includes(lowerTerm));
                 }
                 return result;
             }, [expenses, filterCategory, searchTerm]);
+
+            // Calculator Logic
+            const openCalculator = (initialValue, callback) => {
+                setCurrentCalcValue(initialValue ? String(initialValue) : '');
+                setCalculatorCallback(() => callback);
+                setShowCalculator(true);
+            };
+
+            const handleCalcConfirm = (val) => {
+                if (calculatorCallback) calculatorCallback(val);
+                setShowCalculator(false);
+            };
 
             return (
                 <>
                     <div className="mobile-container">
                         {dialog.show && (
                             <div className="fixed inset-0 bg-stone-800/40 z-[3000] flex items-center justify-center p-4 fade-in backdrop-blur-sm">
-                                <div className="bg-cream-50 rounded-xl shadow-lg w-full max-w-xs transform transition-all scale-100 p-6 text-center border border-cream-200">
+                                <div className="bg-cream-50 rounded-xl shadow-lg w-full max-w-xs p-6 text-center border border-cream-200">
                                     <h3 className={`font-bold text-lg mb-2 ${dialog.type === 'confirm' || dialog.type === 'prompt' ? 'text-red-500' : 'text-sage-700'}`}>{dialog.title}</h3>
                                     <p className="text-stone-600 mb-6 text-sm whitespace-pre-line leading-relaxed">{dialog.msg}</p>
-                                    
-                                    {dialog.type === 'prompt' && (
-                                        <input 
-                                            type="text" 
-                                            value={promptValue}
-                                            onChange={(e) => setPromptValue(e.target.value)}
-                                            className="w-full border border-stone-300 rounded-lg p-2 mb-6 text-center outline-none focus:border-red-400"
-                                            placeholder="輸入專案名稱"
-                                            autoFocus
-                                        />
-                                    )}
-
+                                    {dialog.type === 'prompt' && <input type="text" value={promptValue} onChange={(e) => setPromptValue(e.target.value)} className="w-full border border-stone-300 rounded-lg p-2 mb-6 text-center outline-none focus:border-red-400" placeholder="輸入內容" autoFocus />}
                                     <div className="flex gap-3 justify-center">
-                                        {(dialog.type === 'confirm' || dialog.type === 'prompt') && (
-                                            <button onClick={() => setDialog(prev => ({...prev, show: false}))} className="px-4 py-2.5 rounded-lg bg-stone-100 text-stone-600 font-medium text-sm flex-1 hover:bg-stone-200 transition-colors">取消</button>
-                                        )}
-                                        <button 
-                                            onClick={() => {
-                                                if (dialog.type === 'prompt') dialog.onConfirm(promptValue);
-                                                else dialog.onConfirm();
-                                            }} 
-                                            className={`px-4 py-2.5 rounded-lg text-white font-medium text-sm flex-1 transition-colors shadow-sm ${dialog.type === 'confirm' || dialog.type === 'prompt' ? 'bg-red-500 hover:bg-red-600' : 'bg-sage-400 hover:bg-sage-500'}`}
-                                        >
-                                            確定
-                                        </button>
+                                        {(dialog.type === 'confirm' || dialog.type === 'prompt') && <button onClick={() => setDialog(prev => ({...prev, show: false}))} className="px-4 py-2.5 rounded-lg bg-stone-100 text-stone-600 font-medium text-sm flex-1 hover:bg-stone-200">取消</button>}
+                                        <button onClick={() => { if (dialog.type === 'prompt') dialog.onConfirm(promptValue); else dialog.onConfirm(); }} className={`px-4 py-2.5 rounded-lg text-white font-medium text-sm flex-1 ${dialog.type === 'confirm' || dialog.type === 'prompt' ? 'bg-red-500 hover:bg-red-600' : 'bg-sage-400 hover:bg-sage-500'}`}>確定</button>
                                     </div>
                                 </div>
                             </div>
                         )}
 
+                        {/* Calculator Modal */}
+                        {showCalculator && <CalculatorModal initialValue={currentCalcValue} onConfirm={handleCalcConfirm} onClose={() => setShowCalculator(false)} />}
+
                         {view === 'login' ? (
                             <LoginView onLogin={handleLogin} handleDeleteHistory={handleDeleteHistory} defaultKey={apiKey} history={loginHistory} />
                         ) : (
                             <>
-                                {/* Combined Header & Filter Block - HIDDEN IN ADD VIEW */}
                                 {view === 'list' && (
                                     <div>
-                                        <Header 
-                                            tripId={tripId} 
-                                            expenses={filteredExpenses} 
-                                            filterCategory={filterCategory}
-                                            onLogout={() => window.location.reload()} 
-                                            onAnalysis={() => setShowAnalysis(true)} 
-                                            onStats={() => setShowStats(true)}
-                                            onDeleteProject={handleDeleteProject}
-                                            toggleSearch={() => setShowSearchBar(!showSearchBar)}
-                                            isSearchOpen={showSearchBar}
-                                        />
-                                        
-                                        {/* Integrated Search & Filter Bar */}
+                                        <Header tripId={tripId} expenses={filteredExpenses} filterCategory={filterCategory} onLogout={() => window.location.reload()} onAnalysis={() => setShowAnalysis(true)} onStats={() => setShowStats(true)} onDeleteProject={handleDeleteProject} toggleSearch={() => setShowSearchBar(!showSearchBar)} isSearchOpen={showSearchBar} onRenameProject={handleRenameProject} />
                                         <div className="bg-cream-50/95 backdrop-blur-sm border-b border-cream-200 shadow-sm px-3 py-3 flex flex-col gap-3">
-                                            
-                                            {/* Search Input (Conditionally Rendered) */}
                                             {showSearchBar && (
                                                 <div className="relative w-full animate-slide-down mb-1">
                                                     <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-stone-400"></i>
-                                                    <input 
-                                                        type="text" 
-                                                        value={searchTerm}
-                                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                                        placeholder="搜尋品名或金額..." 
-                                                        autoFocus
-                                                        className="w-full bg-white border border-stone-200 text-stone-700 text-sm rounded-lg pl-10 pr-10 py-2.5 outline-none focus:border-sage-400 transition-all placeholder-stone-300"
-                                                    />
-                                                    {searchTerm && (
-                                                        <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-stone-400 hover:text-stone-600">
-                                                            <i className="fa-solid fa-circle-xmark"></i>
-                                                        </button>
-                                                    )}
+                                                    <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="搜尋品名或金額..." autoFocus className="w-full bg-white border border-stone-200 text-stone-700 text-sm rounded-lg pl-10 pr-10 py-2.5 outline-none focus:border-sage-400 transition-all placeholder-stone-300" />
+                                                    {searchTerm && <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-stone-400 hover:text-stone-600"><i className="fa-solid fa-circle-xmark"></i></button>}
                                                 </div>
                                             )}
-
                                             <div className="flex items-center">
                                                 <div className="flex-1 overflow-x-auto no-scrollbar flex items-center gap-2 px-1" ref={React.createRef()}>
-                                                    {/* Filter Buttons */}
                                                     <button onClick={() => setFilterCategory('All')} className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-all flex-shrink-0 ${filterCategory === 'All' ? 'bg-sage-400 text-white shadow-sm' : 'bg-white text-stone-500 hover:bg-stone-50 border border-stone-100'}`}>全部</button>
-                                                    {categories.map(c => (
-                                                        <button key={c} onClick={() => setFilterCategory(c)} className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-all flex-shrink-0 ${filterCategory === c ? 'bg-sage-400 text-white shadow-sm' : 'bg-white text-stone-500 hover:bg-stone-50 border border-stone-100'}`}>{c}</button>
-                                                    ))}
+                                                    {categories.map(c => <button key={c} onClick={() => setFilterCategory(c)} className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-all flex-shrink-0 ${filterCategory === c ? 'bg-sage-400 text-white shadow-sm' : 'bg-white text-stone-500 hover:bg-stone-50 border border-stone-100'}`}>{c}</button>)}
                                                 </div>
                                                 <div className="pl-2 border-l border-cream-200 ml-2">
-                                                    <button onClick={() => setShowCatManager(true)} className="w-9 h-9 rounded-full bg-white text-stone-400 flex items-center justify-center hover:bg-sage-50 hover:text-sage-600 transition-colors border border-stone-100" title="管理分類">
-                                                        <i className="fa-solid fa-gear"></i>
-                                                    </button>
+                                                    <button onClick={() => setShowCatManager(true)} className="w-9 h-9 rounded-full bg-white text-stone-400 flex items-center justify-center hover:bg-sage-50 hover:text-sage-600 transition-colors border border-stone-100"><i className="fa-solid fa-gear"></i></button>
                                                 </div>
                                             </div>
                                         </div>
@@ -790,10 +453,9 @@
 
                                 <div className="p-4 pt-4 pb-28">
                                     {view === 'list' && <ExpenseList expenses={filteredExpenses} onEdit={(item) => { setEditItem(item); setView('add'); }} onDelete={handleDelete} />}
-                                    {view === 'add' && <AddForm apiKey={apiKey} onUpdateKey={handleUpdateKey} categories={categories} onAddCategory={handleAddCategory} initialData={editItem} onSave={handleSave} onBatchSave={handleBatchSave} onCancel={() => { setView('list'); setEditItem(null); }} showAlert={showAlert} />}
+                                    {view === 'add' && <AddForm apiKey={apiKey} onUpdateKey={handleUpdateKey} categories={categories} onAddCategory={handleAddCategory} initialData={editItem} onSave={handleSave} onBatchSave={handleBatchSave} onCancel={() => { setView('list'); setEditItem(null); }} showAlert={showAlert} onOpenCalculator={openCalculator} />}
                                 </div>
 
-                                {/* Modals */}
                                 {showAnalysis && <AnalysisModal expenses={expenses} apiKey={apiKey} onClose={() => setShowAnalysis(false)} />}
                                 {showStats && <StatsModal expenses={expenses} onClose={() => setShowStats(false)} />}
                                 {showCatManager && <CategoryManagerModal categories={categories} onAdd={handleAddCategory} onReorder={handleReorderCategories} onEdit={handleEditCategory} onDelete={handleDeleteCategory} onClose={() => setShowCatManager(false)} />}
@@ -801,21 +463,110 @@
                         )}
                     </div>
 
-                    {/* Floating Add Button */}
-                    {view === 'list' && (
-                        <div className="fab-container">
-                            <div className="fab-wrapper">
-                                <button onClick={() => setView('add')} className="fab-btn">
-                                    <i className="fa-solid fa-plus"></i>
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                    {view === 'list' && <div className="fab-container"><div className="fab-wrapper"><button onClick={() => setView('add')} className="fab-btn"><i className="fa-solid fa-plus"></i></button></div></div>}
                 </>
             );
         };
 
         // --- Sub Components ---
+        
+        // Calculator Modal
+        const CalculatorModal = ({ initialValue, onConfirm, onClose }) => {
+            const [display, setDisplay] = React.useState(initialValue || '0');
+            const [equation, setEquation] = React.useState('');
+            const [resetNext, setResetNext] = React.useState(false);
+
+            const handleNum = (num) => {
+                if (resetNext) {
+                    setDisplay(num);
+                    setResetNext(false);
+                } else {
+                    setDisplay(display === '0' ? num : display + num);
+                }
+            };
+
+            const handleOp = (op) => {
+                setEquation(display + ' ' + op + ' ');
+                setResetNext(true);
+            };
+
+            const calculate = () => {
+                try {
+                    let expression = equation + display;
+                    expression = expression.replace(/×/g, '*').replace(/÷/g, '/');
+                    // Safe calculation using Function constructor (better than eval, still handle with care)
+                    const result = new Function('return ' + expression)();
+                    const formatted = String(Math.round(result * 100) / 100); // Round to 2 decimals
+                    setDisplay(formatted);
+                    setEquation('');
+                    setResetNext(true);
+                    return formatted;
+                } catch (e) {
+                    setDisplay('Error');
+                    setEquation('');
+                    setResetNext(true);
+                    return '';
+                }
+            };
+
+            const handleEq = () => {
+                if (equation) calculate();
+            };
+
+            const handleClear = () => {
+                setDisplay('0');
+                setEquation('');
+                setResetNext(false);
+            };
+
+            const handleBackspace = () => {
+                if (display.length > 1) setDisplay(display.slice(0, -1));
+                else setDisplay('0');
+            };
+
+            const handleConfirm = () => {
+                let finalVal = display;
+                if (equation) finalVal = calculate();
+                if (finalVal !== 'Error') onConfirm(finalVal);
+            };
+
+            return (
+                <div className="fixed inset-0 bg-stone-800/50 backdrop-blur-sm z-[3000] flex items-end justify-center animate-fade-in" onClick={onClose}>
+                    <div className="bg-white w-full max-w-lg rounded-t-2xl shadow-2xl p-5 pb-8 animate-slide-up" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-4">
+                            <span className="text-stone-400 text-sm font-mono h-5">{equation}</span>
+                            <button onClick={onClose} className="text-stone-400 hover:text-stone-600"><i className="fa-solid fa-chevron-down"></i></button>
+                        </div>
+                        <div className="calc-display no-scrollbar">{display}</div>
+                        <div className="calc-grid">
+                            <button onClick={handleClear} className="calc-btn text-red-400">C</button>
+                            <button onClick={() => handleOp('÷')} className="calc-btn op">÷</button>
+                            <button onClick={() => handleOp('×')} className="calc-btn op">×</button>
+                            <button onClick={handleBackspace} className="calc-btn text-stone-500"><i className="fa-solid fa-delete-left"></i></button>
+                            
+                            <button onClick={() => handleNum('7')} className="calc-btn">7</button>
+                            <button onClick={() => handleNum('8')} className="calc-btn">8</button>
+                            <button onClick={() => handleNum('9')} className="calc-btn">9</button>
+                            <button onClick={() => handleOp('-')} className="calc-btn op">-</button>
+                            
+                            <button onClick={() => handleNum('4')} className="calc-btn">4</button>
+                            <button onClick={() => handleNum('5')} className="calc-btn">5</button>
+                            <button onClick={() => handleNum('6')} className="calc-btn">6</button>
+                            <button onClick={() => handleOp('+')} className="calc-btn op">+</button>
+                            
+                            <button onClick={() => handleNum('1')} className="calc-btn">1</button>
+                            <button onClick={() => handleNum('2')} className="calc-btn">2</button>
+                            <button onClick={() => handleNum('3')} className="calc-btn">3</button>
+                            <button onClick={handleEq} className="calc-btn eq">=</button>
+                            
+                            <button onClick={() => handleNum('0')} className="calc-btn">0</button>
+                            <button onClick={() => handleNum('.')} className="calc-btn">.</button>
+                            <button onClick={handleConfirm} className="calc-btn ok">確認</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
 
         const LoginView = ({ onLogin, handleDeleteHistory, defaultKey, history }) => {
             const [code, setCode] = React.useState('');
@@ -824,33 +575,18 @@
 
             React.useEffect(() => { if (history && history.length > 0) setCode(history[0]); }, [history]);
             return (
-                // Added flex-grow and w-full to ensure it fills the parent mobile-container for perfect centering
                 <div className="flex-grow flex flex-col items-center justify-center p-6 w-full">
-                    {/* Help Modal */}
                     {showHelp && (
                         <div className="fixed inset-0 bg-stone-800/40 z-[3000] flex items-center justify-center p-4 fade-in backdrop-blur-sm" onClick={() => setShowHelp(false)}>
                             <div className="bg-cream-50 rounded-xl shadow-lg w-full max-w-xs p-6 text-left border border-cream-200 relative" onClick={e => e.stopPropagation()}>
                                 <button onClick={() => setShowHelp(false)} className="absolute right-4 top-4 text-stone-400 hover:text-stone-600"><i className="fa-solid fa-xmark"></i></button>
                                 <h3 className="font-bold text-lg mb-4 text-sage-700 text-center">如何取得金鑰</h3>
                                 <div className="space-y-3 text-sm text-stone-600">
-                                    <div className="flex gap-3">
-                                        <span className="bg-sage-100 text-sage-700 w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-xs">1</span>
-                                        <div>
-                                            登入 <a href="https://aistudio.google.com/app/api-keys" target="_blank" rel="noreferrer" className="text-sage-600 font-medium underline break-all">Google AI Studio</a>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-3">
-                                        <span className="bg-sage-100 text-sage-700 w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-xs">2</span>
-                                        <div>點左側 Key 那列的連結</div>
-                                    </div>
-                                    <div className="flex gap-3">
-                                        <span className="bg-sage-100 text-sage-700 w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-xs">3</span>
-                                        <div>複製 API Key</div>
-                                    </div>
+                                    <div className="flex gap-3"><span className="bg-sage-100 text-sage-700 w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-xs">1</span><div>登入 <a href="https://aistudio.google.com/app/api-keys" target="_blank" className="text-sage-600 font-medium underline break-all">Google AI Studio</a></div></div>
+                                    <div className="flex gap-3"><span className="bg-sage-100 text-sage-700 w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-xs">2</span><div>點左側 Key 那列的連結</div></div>
+                                    <div className="flex gap-3"><span className="bg-sage-100 text-sage-700 w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-xs">3</span><div>複製 API Key</div></div>
                                 </div>
-                                <button onClick={() => setShowHelp(false)} className="btn-primary py-2.5 text-sm mt-6 shadow-sm">
-                                    知道了
-                                </button>
+                                <button onClick={() => setShowHelp(false)} className="btn-primary py-2.5 text-sm mt-6 shadow-sm">知道了</button>
                             </div>
                         </div>
                     )}
@@ -862,47 +598,25 @@
                         
                         <div className="text-left mb-5">
                             <label className="input-label ml-1">旅程代號</label>
-                            <input 
-                                value={code} 
-                                onChange={e => setCode(e.target.value)} 
-                                className="input-field uppercase text-center font-bold tracking-widest text-sage-700 text-lg placeholder:text-stone-300 placeholder:text-sm placeholder:font-normal placeholder:tracking-normal" 
-                                placeholder="例如：小花-2026日本" 
-                            />
-                            <p className="text-xs text-red-400 mt-2 px-1 leading-relaxed">
-                                <i className="fa-solid fa-circle-info mr-1"></i>
-                                請以自己的名稱作為開頭，以免代號跟別人重複。
-                            </p>
+                            <input value={code} onChange={e => setCode(e.target.value)} className="input-field uppercase text-center font-bold tracking-widest text-sage-700 text-lg placeholder:text-stone-300 placeholder:text-sm placeholder:font-normal placeholder:tracking-normal" placeholder="例如：小花-2026日本" />
+                            <p className="text-xs text-red-400 mt-2 px-1 leading-relaxed"><i className="fa-solid fa-circle-info mr-1"></i>請以自己的名稱作為開頭，以免代號跟別人重複。</p>
                             
                             {history.length > 0 && (
                                 <div className="mt-4 flex flex-wrap gap-2 justify-center">
                                     {history.map(h => (
                                         <div key={h} className={`group flex items-center rounded-full border transition-colors ${code === h ? 'bg-sage-50 border-sage-200' : 'bg-white border-stone-200 hover:bg-cream-50'}`}>
-                                            <button onClick={() => setCode(h)} className={`text-xs px-3 py-1.5 rounded-l-full ${code === h ? 'text-sage-700 font-bold' : 'text-stone-500'}`}>
-                                                {h}
-                                            </button>
-                                            <button onClick={(e) => handleDeleteHistory(e, h)} className="pr-2 pl-1 py-1.5 rounded-r-full text-stone-300 hover:text-red-400 transition-colors">
-                                                <i className="fa-solid fa-xmark text-[10px]"></i>
-                                            </button>
+                                            <button onClick={() => setCode(h)} className={`text-xs px-3 py-1.5 rounded-l-full ${code === h ? 'text-sage-700 font-bold' : 'text-stone-500'}`}>{h}</button>
+                                            <button onClick={(e) => handleDeleteHistory(e, h)} className="pr-2 pl-1 py-1.5 rounded-r-full text-stone-300 hover:text-red-400 transition-colors"><i className="fa-solid fa-xmark text-[10px]"></i></button>
                                         </div>
                                     ))}
                                 </div>
                             )}
                         </div>
                         <div className="text-left mb-8 relative">
-                            <div className="flex justify-between items-end">
-                                <label className="input-label ml-1">Gemini API Key</label>
-                                <button type="button" onClick={() => setShowHelp(true)} className="text-xs text-sage-500 hover:text-sage-700 mb-2 mr-1 underline decoration-dotted">如何取得金鑰?</button>
-                            </div>
+                            <div className="flex justify-between items-end"><label className="input-label ml-1">Gemini API Key</label><button type="button" onClick={() => setShowHelp(true)} className="text-xs text-sage-500 hover:text-sage-700 mb-2 mr-1 underline decoration-dotted">如何取得金鑰?</button></div>
                             <div className="relative">
                                 <input type="password" value={key} onChange={e => setKey(e.target.value)} className="input-field text-sm pr-10" placeholder="請貼上 Key (自動記憶)" />
-                                {key && (
-                                    <button 
-                                        onClick={() => setKey('')}
-                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-stone-400 hover:text-sage-600"
-                                    >
-                                        <i className="fa-solid fa-circle-xmark"></i>
-                                    </button>
-                                )}
+                                {key && <button onClick={() => setKey('')} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-stone-400 hover:text-sage-600"><i className="fa-solid fa-circle-xmark"></i></button>}
                             </div>
                             {defaultKey && <p className="text-xs text-sage-600 mt-1.5 ml-1 flex items-center"><i className="fa-solid fa-check-circle mr-1"></i> 已自動載入</p>}
                         </div>
@@ -912,7 +626,7 @@
             );
         };
 
-        const Header = ({ tripId, expenses, filterCategory, onLogout, onAnalysis, onStats, onDeleteProject, toggleSearch, isSearchOpen }) => {
+        const Header = ({ tripId, expenses, filterCategory, onLogout, onAnalysis, onStats, onDeleteProject, toggleSearch, isSearchOpen, onRenameProject }) => {
             const totals = React.useMemo(() => {
                 const map = {};
                 expenses.forEach(e => {
@@ -934,21 +648,18 @@
                     <div className="flex justify-between items-start mb-1">
                         <div>
                             <span className="text-sage-50 text-xs uppercase tracking-wider block font-medium opacity-90">Project</span>
-                            <h2 className="font-bold text-xl leading-tight tracking-wide">{tripId}</h2>
+                            <div className="flex items-center gap-2">
+                                <h2 className="font-bold text-xl leading-tight tracking-wide">{tripId}</h2>
+                                <button onClick={onRenameProject} className="text-sage-200 hover:text-white transition-colors" title="修改專案名稱"><i className="fa-solid fa-pen-to-square text-xs"></i></button>
+                            </div>
                         </div>
                         <div className="flex gap-1 bg-white/10 rounded-full p-1 backdrop-blur-sm">
-                             {/* 搜尋按鈕 */}
                              <button onClick={toggleSearch} className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isSearchOpen ? 'bg-white text-sage-600' : 'hover:bg-white/20'}`} title="搜尋">
                                 <i className="fa-solid fa-magnifying-glass text-sm"></i>
                             </button>
                             <button onClick={onStats} className="w-8 h-8 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors" title="統計"><i className="fa-solid fa-chart-pie text-sm"></i></button>
                             <button onClick={onAnalysis} className="w-8 h-8 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors" title="分析"><i className="fa-solid fa-wand-magic-sparkles text-sm text-yellow-100"></i></button>
-                            
-                            {/* 刪除專案按鈕 */}
-                            <button onClick={onDeleteProject} className="w-8 h-8 rounded-full hover:bg-red-500/80 flex items-center justify-center transition-colors text-red-200 hover:text-white" title="刪除專案">
-                                <i className="fa-solid fa-trash-can text-sm"></i>
-                            </button>
-                            
+                            <button onClick={onDeleteProject} className="w-8 h-8 rounded-full hover:bg-red-500/80 flex items-center justify-center transition-colors text-red-200 hover:text-white" title="刪除專案"><i className="fa-solid fa-trash-can text-sm"></i></button>
                             <button onClick={onLogout} className="w-8 h-8 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors" title="登出"><i className="fa-solid fa-arrow-right-from-bracket text-sm"></i></button>
                         </div>
                     </div>
@@ -969,52 +680,28 @@
             );
         };
 
-        // --- Processing Modal (Progress Bar) ---
         const ProcessingModal = ({ progress }) => (
             <div className="fixed inset-0 bg-stone-800/40 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 fade-in">
                 <div className="bg-white rounded-2xl shadow-xl w-full max-w-xs p-6 text-center border border-stone-100">
-                    <div className="w-16 h-16 mx-auto mb-4 relative flex items-center justify-center">
-                         <div className="loader w-full h-full border-4 border-stone-100 border-t-sage-400"></div>
-                         <i className="fa-solid fa-wand-magic-sparkles text-sage-400 absolute text-xl"></i>
-                    </div>
+                    <div className="w-16 h-16 mx-auto mb-4 relative flex items-center justify-center"><div className="loader w-full h-full border-4 border-stone-100 border-t-sage-400"></div><i className="fa-solid fa-wand-magic-sparkles text-sage-400 absolute text-xl"></i></div>
                     <h3 className="font-bold text-lg mb-2 text-stone-700">AI 辨識中...</h3>
                     <p className="text-stone-500 text-sm mb-4">正在分析收據內容</p>
-                    
-                    <div className="w-full bg-stone-100 rounded-full h-2.5 mb-2 overflow-hidden border border-stone-200">
-                        <div className="bg-sage-400 h-2.5 rounded-full transition-all duration-300 ease-out" style={{ width: `${progress}%` }}></div>
-                    </div>
+                    <div className="w-full bg-stone-100 rounded-full h-2.5 mb-2 overflow-hidden border border-stone-200"><div className="bg-sage-400 h-2.5 rounded-full transition-all duration-300 ease-out" style={{ width: `${progress}%` }}></div></div>
                     <p className="text-xs text-stone-400 font-mono">{progress}%</p>
                 </div>
             </div>
         );
 
-        // --- API Key Rescue Modal ---
         const ApiKeyRescueModal = ({ onSave, onCancel }) => {
             const [newKey, setNewKey] = React.useState('');
             return (
                 <div className="fixed inset-0 bg-stone-800/40 z-[1000] flex items-center justify-center p-4 fade-in">
                     <div className="bg-white rounded-2xl shadow-xl w-full max-w-xs p-6 text-center border border-stone-100">
-                        <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto mb-3">
-                            <i className="fa-solid fa-key text-xl"></i>
-                        </div>
+                        <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto mb-3"><i className="fa-solid fa-key text-xl"></i></div>
                         <h3 className="font-bold text-lg mb-2 text-stone-800">API Key 無效</h3>
                         <p className="text-stone-500 text-sm mb-4">您的 AI 金鑰似乎有問題。請輸入新的 Key 以繼續。</p>
-                        <input 
-                            value={newKey}
-                            onChange={(e) => setNewKey(e.target.value)}
-                            className="input-field text-sm mb-4" 
-                            placeholder="貼上新的 API Key" 
-                            autoFocus
-                        />
-                        <div className="flex gap-2">
-                            <button onClick={onCancel} className="btn-secondary flex-1 py-2 text-sm">取消</button>
-                            <button 
-                                onClick={() => { if(newKey.trim()) onSave(newKey.trim()); }} 
-                                className="btn-primary flex-1 py-2 text-sm bg-sage-400 hover:bg-sage-500"
-                            >
-                                更新並重試
-                            </button>
-                        </div>
+                        <input value={newKey} onChange={(e) => setNewKey(e.target.value)} className="input-field text-sm mb-4" placeholder="貼上新的 API Key" autoFocus />
+                        <div className="flex gap-2"><button onClick={onCancel} className="btn-secondary flex-1 py-2 text-sm">取消</button><button onClick={() => { if(newKey.trim()) onSave(newKey.trim()); }} className="btn-primary flex-1 py-2 text-sm bg-sage-400 hover:bg-sage-500">更新並重試</button></div>
                     </div>
                 </div>
             );
@@ -1024,70 +711,29 @@
             const [newCatName, setNewCatName] = React.useState('');
             const [editingIndex, setEditingIndex] = React.useState(-1);
             const [editValue, setEditValue] = React.useState('');
-            
             const listRef = React.useRef(null);
-
-            // Initialize SortableJS
             React.useEffect(() => {
                 if (!listRef.current) return;
-                
-                const sortable = new Sortable(listRef.current, {
-                    animation: 150,
-                    handle: '.drag-handle', 
-                    ghostClass: 'sortable-ghost',
-                    dragClass: 'sortable-drag',
-                    delay: 100,
-                    delayOnTouchOnly: true,
-                    onEnd: (evt) => {
-                        const newItems = [...categories];
-                        const [movedItem] = newItems.splice(evt.oldIndex, 1);
-                        newItems.splice(evt.newIndex, 0, movedItem);
-                        onReorder(newItems);
-                    }
-                });
-
+                const sortable = new Sortable(listRef.current, { animation: 150, handle: '.drag-handle', ghostClass: 'sortable-ghost', dragClass: 'sortable-drag', delay: 100, delayOnTouchOnly: true, onEnd: (evt) => { const newItems = [...categories]; const [movedItem] = newItems.splice(evt.oldIndex, 1); newItems.splice(evt.newIndex, 0, movedItem); onReorder(newItems); } });
                 return () => sortable.destroy();
             }, [categories, onReorder]);
-
             const handleAdd = () => { if (newCatName.trim()) { onAdd(newCatName.trim()); setNewCatName(''); } };
             const startEdit = (index, val) => { setEditingIndex(index); setEditValue(val); };
             const saveEdit = (oldName) => { if (editValue.trim() && editValue !== oldName) { onEdit(oldName, editValue.trim()); } setEditingIndex(-1); };
-
             return (
                 <div className="fixed inset-0 bg-stone-800/40 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 fade-in">
                     <div className="bg-cream-50/95 backdrop-blur-md rounded-2xl shadow-xl w-full max-w-sm flex flex-col max-h-[80vh] border border-cream-200">
-                        <div className="p-5 border-b border-cream-200 flex justify-between items-center">
-                            <h3 className="font-bold text-stone-700 text-lg">分類管理</h3>
-                            <button onClick={onClose}><i className="fa-solid fa-xmark text-xl text-stone-400 hover:text-stone-600"></i></button>
-                        </div>
+                        <div className="p-5 border-b border-cream-200 flex justify-between items-center"><h3 className="font-bold text-stone-700 text-lg">分類管理</h3><button onClick={onClose}><i className="fa-solid fa-xmark text-xl text-stone-400 hover:text-stone-600"></i></button></div>
                         <div className="p-4 overflow-y-auto flex-1 space-y-2" ref={listRef}>
                             {categories.map((cat, idx) => (
-                                <div 
-                                    key={cat} 
-                                    className="flex justify-between items-center p-3 border border-cream-100 rounded-xl bg-white hover:shadow-sm transition-all"
-                                >
-                                    <div className="drag-handle mr-3 text-stone-300 cursor-grab active:cursor-grabbing p-1">
-                                        <i className="fa-solid fa-bars"></i>
-                                    </div>
-                                    {editingIndex === idx ? (
-                                        <div className="flex-1 flex gap-2 mr-2">
-                                            <input value={editValue} onChange={e => setEditValue(e.target.value)} className="border rounded-lg px-2 py-1 w-full text-sm outline-none focus:border-sage-400" autoFocus />
-                                            <button onClick={() => saveEdit(cat)} className="text-sage-600 w-8 h-8 flex items-center justify-center bg-sage-50 rounded-lg"><i className="fa-solid fa-check"></i></button>
-                                        </div>
-                                    ) : <span className="flex-1 text-stone-600 font-medium pl-1">{cat}</span>}
-                                    {editingIndex !== idx && (
-                                        <div className="flex gap-2 text-stone-400">
-                                            <button onClick={() => startEdit(idx, cat)} className="w-8 h-8 rounded-lg hover:bg-sage-50 hover:text-sage-500 transition-colors"><i className="fa-solid fa-pen"></i></button>
-                                            <button onClick={() => onDelete(cat)} className="w-8 h-8 rounded-lg hover:bg-red-50 hover:text-red-500 transition-colors"><i className="fa-solid fa-trash"></i></button>
-                                        </div>
-                                    )}
+                                <div key={cat} className="flex justify-between items-center p-3 border border-cream-100 rounded-xl bg-white hover:shadow-sm transition-all">
+                                    <div className="drag-handle mr-3 text-stone-300 cursor-grab active:cursor-grabbing p-1"><i className="fa-solid fa-bars"></i></div>
+                                    {editingIndex === idx ? (<div className="flex-1 flex gap-2 mr-2"><input value={editValue} onChange={e => setEditValue(e.target.value)} className="border rounded-lg px-2 py-1 w-full text-sm outline-none focus:border-sage-400" autoFocus /><button onClick={() => saveEdit(cat)} className="text-sage-600 w-8 h-8 flex items-center justify-center bg-sage-50 rounded-lg"><i className="fa-solid fa-check"></i></button></div>) : <span className="flex-1 text-stone-600 font-medium pl-1">{cat}</span>}
+                                    {editingIndex !== idx && (<div className="flex gap-2 text-stone-400"><button onClick={() => startEdit(idx, cat)} className="w-8 h-8 rounded-lg hover:bg-sage-50 hover:text-sage-500 transition-colors"><i className="fa-solid fa-pen"></i></button><button onClick={() => onDelete(cat)} className="w-8 h-8 rounded-lg hover:bg-red-50 hover:text-red-500 transition-colors"><i className="fa-solid fa-trash"></i></button></div>)}
                                 </div>
                             ))}
                         </div>
-                        <div className="p-4 border-t border-cream-200 flex gap-2">
-                            <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="新增分類名稱" className="flex-1 border border-stone-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-sage-400 focus:bg-white bg-white transition-colors" />
-                            <button onClick={handleAdd} className="bg-sage-400 text-white w-10 rounded-lg hover:bg-sage-500 shadow-sm"><i className="fa-solid fa-plus"></i></button>
-                        </div>
+                        <div className="p-4 border-t border-cream-200 flex gap-2"><input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="新增分類名稱" className="flex-1 border border-stone-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-sage-400 focus:bg-white bg-white transition-colors" /><button onClick={handleAdd} className="bg-sage-400 text-white w-10 rounded-lg hover:bg-sage-500 shadow-sm"><i className="fa-solid fa-plus"></i></button></div>
                     </div>
                 </div>
             );
@@ -1109,31 +755,14 @@
                     catMap[cat].currencies[curr].amount += foreign;
                     catMap[cat].currencies[curr].twd += twd;
                 });
-                return Object.entries(catMap)
-                    .sort((a, b) => b[1].totalTWD - a[1].totalTWD) 
-                    .map(([cat, data]) => ({
-                        cat, totalTWD: data.totalTWD, percent: total > 0 ? (data.totalTWD / total * 100) : 0,
-                        currencies: Object.entries(data.currencies).map(([curr, val]) => ({ curr, amount: val.amount, twd: val.twd }))
-                    }));
+                return Object.entries(catMap).sort((a, b) => b[1].totalTWD - a[1].totalTWD).map(([cat, data]) => ({ cat, totalTWD: data.totalTWD, percent: total > 0 ? (data.totalTWD / total * 100) : 0, currencies: Object.entries(data.currencies).map(([curr, val]) => ({ curr, amount: val.amount, twd: val.twd })) }));
             }, [expenses]);
-
-            const selectedTotal = React.useMemo(() => {
-                return stats.filter(item => !excludedCats.has(item.cat)).reduce((sum, item) => sum + item.totalTWD, 0);
-            }, [stats, excludedCats]);
-
-            const toggleCategory = (cat) => {
-                const newSet = new Set(excludedCats);
-                if (newSet.has(cat)) newSet.delete(cat); else newSet.add(cat);
-                setExcludedCats(newSet);
-            };
-
+            const selectedTotal = React.useMemo(() => stats.filter(item => !excludedCats.has(item.cat)).reduce((sum, item) => sum + item.totalTWD, 0), [stats, excludedCats]);
+            const toggleCategory = (cat) => { const newSet = new Set(excludedCats); if (newSet.has(cat)) newSet.delete(cat); else newSet.add(cat); setExcludedCats(newSet); };
             return (
                 <div className="fixed inset-0 bg-stone-800/40 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 fade-in">
                     <div className="bg-cream-50/95 backdrop-blur-xl rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col border border-cream-100">
-                        <div className="p-5 border-b border-cream-100 flex justify-between items-center">
-                            <h3 className="font-bold text-stone-700 text-lg"><i className="fa-solid fa-calculator mr-2 text-sage-400"></i>消費計算機</h3>
-                            <button onClick={onClose}><i className="fa-solid fa-xmark text-lg text-stone-400 hover:text-stone-600"></i></button>
-                        </div>
+                        <div className="p-5 border-b border-cream-100 flex justify-between items-center"><h3 className="font-bold text-stone-700 text-lg"><i className="fa-solid fa-calculator mr-2 text-sage-400"></i>消費計算機</h3><button onClick={onClose}><i className="fa-solid fa-xmark text-lg text-stone-400 hover:text-stone-600"></i></button></div>
                         <div className="p-5 overflow-y-auto flex-1">
                             {stats.length === 0 ? <p className="text-center text-stone-400 py-4">無資料</p> : (
                                 <div className="space-y-6">
@@ -1143,10 +772,7 @@
                                         return (
                                             <div key={idx} className={`transition-all duration-300 ${isExcluded ? 'opacity-40 grayscale' : 'opacity-100'}`}>
                                                 <div className="flex items-center justify-between mb-2">
-                                                    <div className="flex items-center gap-3">
-                                                        <input type="checkbox" className="custom-checkbox" checked={!isExcluded} onChange={() => toggleCategory(item.cat)} />
-                                                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: `hsl(${100 + idx * 15}, 20%, 55%)` }}></div><span className="font-bold text-stone-600">{item.cat}</span></div>
-                                                    </div>
+                                                    <div className="flex items-center gap-3"><input type="checkbox" className="custom-checkbox" checked={!isExcluded} onChange={() => toggleCategory(item.cat)} /><div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: `hsl(${100 + idx * 15}, 20%, 55%)` }}></div><span className="font-bold text-stone-600">{item.cat}</span></div></div>
                                                     <div className="text-right"><span className="text-xs text-stone-400">({item.percent.toFixed(1)}%)</span></div>
                                                 </div>
                                                 <div className="stat-bar-bg mb-3 ml-8 w-auto h-1.5"><div className="stat-bar-fill h-full" style={{ width: `${item.percent}%`, backgroundColor: `hsl(${100 + idx * 15}, 20%, 55%)` }}></div></div>
@@ -1198,36 +824,14 @@
                 <div className="space-y-3 pb-24">
                     {expenses.map(item => (
                         <div key={item.id} onClick={() => onEdit(item)} className="card-soft relative p-4 active:scale-[0.98] transition-transform cursor-pointer">
-                            {/* Delete Button (Top Right) */}
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); onDelete(item.id); }} 
-                                className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center text-stone-300 hover:bg-red-50 hover:text-red-500 rounded-full transition-colors z-10"
-                            >
-                                <i className="fa-solid fa-trash text-xs"></i>
-                            </button>
-
+                            <button onClick={(e) => { e.stopPropagation(); onDelete(item.id); }} className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center text-stone-300 hover:bg-red-50 hover:text-red-500 rounded-full transition-colors z-10"><i className="fa-solid fa-trash text-xs"></i></button>
                             <div className="flex flex-col gap-2">
-                                {/* Top Row: Category & Date */}
-                                <div className="flex items-center gap-2 pr-8"> {/* pr-8 to avoid overlap with delete btn */}
-                                    <span className="bg-sage-50 text-sage-600 px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wide uppercase">{item.category}</span>
-                                    <span className="text-[10px] text-stone-400 font-medium">{formatDateTime(item.createdAt?.seconds)}</span>
-                                </div>
-
-                                {/* Middle Row: Item Name & Amount */}
+                                <div className="flex items-center gap-2 pr-8"><span className="bg-sage-50 text-sage-600 px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wide uppercase">{item.category}</span><span className="text-[10px] text-stone-400 font-medium">{formatDateTime(item.createdAt?.seconds)}</span></div>
                                 <div className="flex justify-between items-start">
                                     <div className="font-bold text-stone-700 text-base leading-snug break-words flex-1 pr-2">{item.item || "未命名"}</div>
-                                    
                                     <div className="flex flex-col items-end flex-shrink-0">
                                         <div className="flex items-baseline gap-1">
-                                            {item.currency !== 'TWD' ? (
-                                                <span className="font-bold text-stone-800 text-lg tracking-tight">
-                                                    {item.currency} {Number(item.foreignAmount).toLocaleString()}
-                                                </span>
-                                            ) : (
-                                                <span className="font-bold text-stone-800 text-xl tracking-tight">
-                                                    {formatMoney(item.twdAmount)}
-                                                </span>
-                                            )}
+                                            {item.currency !== 'TWD' ? (<span className="font-bold text-stone-800 text-lg tracking-tight">{item.currency} {Number(item.foreignAmount).toLocaleString()}</span>) : (<span className="font-bold text-stone-800 text-xl tracking-tight">{formatMoney(item.twdAmount)}</span>)}
                                         </div>
                                         {item.currency !== 'TWD' && <span className="text-xs text-stone-400 font-medium">≈ NT$ {Number(item.twdAmount).toLocaleString()}</span>}
                                     </div>
@@ -1239,7 +843,7 @@
             );
         };
 
-        const AddForm = ({ apiKey, onUpdateKey, categories, onAddCategory, initialData, onSave, onBatchSave, onCancel, showAlert }) => {
+        const AddForm = ({ apiKey, onUpdateKey, categories, onAddCategory, initialData, onSave, onBatchSave, onCancel, showAlert, onOpenCalculator }) => {
             const [form, setForm] = React.useState({ category: '飲食', item: '', currency: 'JPY', foreignAmount: '', exchangeRate: 0.22, twdAmount: '' });
             const [loading, setLoading] = React.useState(false);
             const [scannedItems, setScannedItems] = React.useState([]); 
@@ -1249,48 +853,23 @@
             const [newCatName, setNewCatName] = React.useState("");
             const [classifying, setClassifying] = React.useState(false);
             const [showRescueModal, setShowRescueModal] = React.useState(false);
-            
-            // Progress Bar State
             const [progress, setProgress] = React.useState(0);
-
             const fileRef = React.useRef(null);
-            
-            // Apply drag scroll hook to the category list container inside AddForm
             const categoryListRef = React.useRef(null);
             useDraggableScroll(categoryListRef);
 
             React.useEffect(() => { if (initialData) setForm(initialData); }, [initialData]);
 
-            // Auto fetch rate when currency changes
             React.useEffect(() => {
-                if (form.currency === 'TWD') {
-                    setForm(p => ({ ...p, twdAmount: p.foreignAmount, exchangeRate: 1 }));
-                } else {
-                    const fetchRate = async () => {
-                        try {
-                            const res = await fetch(`https://api.exchangerate-api.com/v4/latest/${form.currency}`);
-                            const data = await res.json();
-                            const rate = data.rates.TWD;
-                            if (rate) {
-                                setForm(p => {
-                                    const twd = p.foreignAmount ? Math.round(parseFloat(p.foreignAmount) * rate) : '';
-                                    return { ...p, exchangeRate: rate, twdAmount: twd };
-                                });
-                            }
-                        } catch (e) { console.error("Rate fetch failed", e); }
-                    };
+                if (form.currency === 'TWD') { setForm(p => ({ ...p, twdAmount: p.foreignAmount, exchangeRate: 1 })); } 
+                else {
+                    const fetchRate = async () => { try { const res = await fetch(`https://api.exchangerate-api.com/v4/latest/${form.currency}`); const data = await res.json(); const rate = data.rates.TWD; if (rate) { setForm(p => { const twd = p.foreignAmount ? Math.round(parseFloat(p.foreignAmount) * rate) : ''; return { ...p, exchangeRate: rate, twdAmount: twd }; }); } } catch (e) { console.error("Rate fetch failed", e); } };
                     fetchRate();
                 }
             }, [form.currency]);
 
-            // Auto calc TWD when amount/rate changes
             React.useEffect(() => {
-                if (form.currency !== 'TWD' && form.foreignAmount && form.exchangeRate) {
-                    const twd = Math.round(parseFloat(form.foreignAmount) * parseFloat(form.exchangeRate));
-                    setForm(p => ({ ...p, twdAmount: twd }));
-                } else if (form.currency === 'TWD') {
-                    setForm(p => ({ ...p, twdAmount: p.foreignAmount }));
-                }
+                if (form.currency !== 'TWD' && form.foreignAmount && form.exchangeRate) { const twd = Math.round(parseFloat(form.foreignAmount) * parseFloat(form.exchangeRate)); setForm(p => ({ ...p, twdAmount: twd })); } else if (form.currency === 'TWD') { setForm(p => ({ ...p, twdAmount: p.foreignAmount })); }
             }, [form.foreignAmount, form.exchangeRate]);
 
             const handleSmartClassify = async () => {
@@ -1299,10 +878,7 @@
                 setClassifying(true);
                 try {
                     const prompt = `請將「${form.item}」歸類為以下其中之一：${categories.join(', ')}。只回傳分類名稱，不要有其他文字。如果無法判斷，回傳「其他」。`;
-                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                    });
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
                     const data = await response.json();
                     if (data.candidates && data.candidates[0].content) {
                         const predictedCat = data.candidates[0].content.parts[0].text.trim();
@@ -1312,113 +888,42 @@
                 } catch (e) { console.error("分類失敗", e); } finally { setClassifying(false); }
             };
 
-            const handleConfirmAddCategory = () => {
-                if (newCatName && newCatName.trim() !== "") {
-                    onAddCategory(newCatName.trim());
-                    setForm(prev => ({ ...prev, category: newCatName.trim() }));
-                    setNewCatName("");
-                    setIsAddingCat(false);
-                } else { setIsAddingCat(false); }
-            };
+            const handleConfirmAddCategory = () => { if (newCatName && newCatName.trim() !== "") { onAddCategory(newCatName.trim()); setForm(prev => ({ ...prev, category: newCatName.trim() })); setNewCatName(""); setIsAddingCat(false); } else { setIsAddingCat(false); } };
 
             const handleImageUpload = async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
                 const currentKey = apiKey ? apiKey.trim() : "";
-                if (!currentKey) { 
-                    setShowRescueModal(true);
-                    e.target.value = ''; return; 
-                }
-                
-                // Initialize Loading & Progress
-                setLoading(true);
-                setProgress(5); // Start
-                
-                // Fake Progress Interval
-                const interval = setInterval(() => {
-                    setProgress(prev => {
-                        if (prev >= 90) return 90;
-                        const increment = prev < 60 ? 5 : 2;
-                        return prev + increment;
-                    });
-                }, 200);
-
+                if (!currentKey) { setShowRescueModal(true); e.target.value = ''; return; }
+                setLoading(true); setProgress(5);
+                const interval = setInterval(() => { setProgress(prev => { if (prev >= 90) return 90; return prev + (prev < 60 ? 5 : 2); }); }, 200);
                 try {
                     const reader = new FileReader();
                     reader.readAsDataURL(file);
                     reader.onload = async () => {
                         const base64Data = reader.result.split(',')[1];
-                        const prompt = `你是一個記帳助手。請辨識這張收據上的每一筆消費項目。
-                        重要原則：
-                        1. 請將所有商品名稱翻譯成「繁體中文」。
-                        2. 請同時辨識「商店名稱」。
-                        3. **若品項有對應的折扣或優惠，請直接計算並列出「折後金額」，不要將折扣分開列出。**
-                        4. **若有「整單合計的折扣」無法歸屬單一品項，請務必列為單獨項目，金額標記為負數。**
-                        請回傳一個 JSON 物件，格式如下 (不要用Markdown):
-                        {
-                            "store": "商店名稱(例如: 7-11, Uniqlo)",
-                            "currency": "幣別(如 TWD, JPY)",
-                            "items": [
-                                { "name": "品項名稱(請翻譯成繁體中文)", "amount": 金額數字, "category": "飲食/交通/住宿/購物/門票/其他" },
-                                ...
-                            ]
-                        }`;
-                        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${currentKey}`, {
-                            method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: file.type, data: base64Data } }] }] })
-                        });
+                        const prompt = `你是一個記帳助手。請辨識這張收據上的每一筆消費項目。原則：1. 翻譯成繁體中文。2. 辨識商店名稱。3. 列出折後金額。4. 折扣若無法歸屬則列為負數。回傳 JSON: { "store": "商店名", "currency": "幣別", "items": [ { "name": "品名", "amount": 數字, "category": "分類" } ] }`;
+                        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${currentKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: file.type, data: base64Data } }] }] }) });
                         const data = await response.json();
-                        
-                        clearInterval(interval);
-                        setProgress(100);
-
-                        if (data.error) {
-                            if (data.error.code === 400 && (data.error.message.includes("API key not valid") || data.error.message.includes("API key"))) {
-                                setLoading(false);
-                                setShowRescueModal(true);
-                                return;
-                            }
-                            throw new Error(`API 錯誤: ${data.error.message}`);
-                        }
+                        clearInterval(interval); setProgress(100);
+                        if (data.error) { if (data.error.code === 400 && data.error.message.includes("API key")) { setLoading(false); setShowRescueModal(true); return; } throw new Error(`API 錯誤: ${data.error.message}`); }
                         if (!data.candidates || !data.candidates[0].content) throw new Error("AI 未回傳結果");
                         const text = data.candidates[0].content.parts[0].text;
                         const jsonMatch = text.match(/\{[\s\S]*\}/);
                         const cleanText = jsonMatch ? jsonMatch[0] : text;
                         let result = JSON.parse(cleanText);
-                        
                         let rate = 1;
-                        if (result.currency && result.currency !== 'TWD') {
-                             try {
-                                const res = await fetch(`https://api.exchangerate-api.com/v4/latest/${result.currency}`);
-                                const rData = await res.json();
-                                rate = rData.rates.TWD || 0.22;
-                             } catch(e) { console.log("Rate fetch failed in AI", e); rate = 0.22; }
-                        }
-
-                        // Delay processing slightly to show 100% completion
+                        if (result.currency && result.currency !== 'TWD') { try { const res = await fetch(`https://api.exchangerate-api.com/v4/latest/${result.currency}`); const rData = await res.json(); rate = rData.rates.TWD || 0.22; } catch(e) { rate = 0.22; } }
                         setTimeout(() => {
                             if (result.items && result.items.length > 0) {
                                 const storeName = result.store ? ` (@${result.store})` : '';
-                                
-                                // Modified mapping logic with category inheritance
                                 const mappedItems = [];
                                 result.items.forEach((i) => {
                                     let cat = categories.includes(i.category) ? i.category : '購物';
-                                    
-                                    // Logic: If it is a discount (amount < 0) and we have previous items, use the last item's category
-                                    if (Number(i.amount) < 0 && mappedItems.length > 0) {
-                                        cat = mappedItems[mappedItems.length - 1].category;
-                                    }
-
-                                    mappedItems.push({
-                                        ...i,
-                                        name: i.name + storeName,
-                                        category: cat
-                                    });
+                                    if (Number(i.amount) < 0 && mappedItems.length > 0) cat = mappedItems[mappedItems.length - 1].category;
+                                    mappedItems.push({ ...i, name: i.name + storeName, category: cat });
                                 });
-
-                                setScannedItems(mappedItems);
-                                setSelectedIndices(new Set(result.items.map((_, i) => i)));
+                                setScannedItems(mappedItems); setSelectedIndices(new Set(result.items.map((_, i) => i)));
                                 if (result.currency) setScanSettings(prev => ({ ...prev, currency: result.currency, exchangeRate: rate }));
                             } else {
                                 showAlert("未偵測到細項，將轉為單筆輸入模式。");
@@ -1429,150 +934,47 @@
                             }
                             setLoading(false);
                         }, 500);
-
                     };
-                } catch (error) { 
-                    clearInterval(interval);
-                    setLoading(false);
-                    console.error(error); 
-                    showAlert("辨識失敗: " + error.message, "錯誤"); 
-                } finally { e.target.value = ''; }
+                } catch (error) { clearInterval(interval); setLoading(false); console.error(error); showAlert("辨識失敗: " + error.message, "錯誤"); } finally { e.target.value = ''; }
             };
 
-            const updateScannedItem = (index, field, value) => {
-                const newItems = [...scannedItems];
-                newItems[index] = { ...newItems[index], [field]: value };
-                setScannedItems(newItems);
-            };
-
-            const confirmBatchSave = () => {
-                const selectedItems = scannedItems.filter((_, i) => selectedIndices.has(i));
-                if (selectedItems.length === 0) return showAlert("請至少選擇一個項目");
-                const itemsToSave = selectedItems.map(item => {
-                    let twd = scanSettings.currency === 'TWD' ? Number(item.amount) : Math.round(Number(item.amount) * Number(scanSettings.exchangeRate));
-                    return {
-                        item: item.name, category: item.category, currency: scanSettings.currency,
-                        foreignAmount: item.amount, exchangeRate: scanSettings.currency === 'TWD' ? 1 : scanSettings.exchangeRate,
-                        twdAmount: twd
-                    };
-                });
-                onBatchSave(itemsToSave);
-                setScannedItems([]);
-            };
-
-            const handleRescueKey = (newKey) => {
-                if (onUpdateKey(newKey)) {
-                    setShowRescueModal(false);
-                    alert("Key 已更新！請再次點擊「拍收據」重試。");
-                }
-            };
-            
+            const updateScannedItem = (index, field, value) => { const newItems = [...scannedItems]; newItems[index] = { ...newItems[index], [field]: value }; setScannedItems(newItems); };
+            const confirmBatchSave = () => { const selectedItems = scannedItems.filter((_, i) => selectedIndices.has(i)); if (selectedItems.length === 0) return showAlert("請至少選擇一個項目"); const itemsToSave = selectedItems.map(item => { let twd = scanSettings.currency === 'TWD' ? Number(item.amount) : Math.round(Number(item.amount) * Number(scanSettings.exchangeRate)); return { item: item.name, category: item.category, currency: scanSettings.currency, foreignAmount: item.amount, exchangeRate: scanSettings.currency === 'TWD' ? 1 : scanSettings.exchangeRate, twdAmount: twd }; }); onBatchSave(itemsToSave); setScannedItems([]); };
+            const handleRescueKey = (newKey) => { if (onUpdateKey(newKey)) { setShowRescueModal(false); alert("Key 已更新！請再次點擊「拍收據」重試。"); } };
             const isAllSelected = scannedItems.length > 0 && selectedIndices.size === scannedItems.length;
-            const toggleSelectAll = () => {
-                if (isAllSelected) {
-                    setSelectedIndices(new Set());
-                } else {
-                    setSelectedIndices(new Set(scannedItems.map((_, i) => i)));
-                }
-            };
+            const toggleSelectAll = () => { if (isAllSelected) setSelectedIndices(new Set()); else setSelectedIndices(new Set(scannedItems.map((_, i) => i))); };
 
             return (
                 <div className="card-soft p-5 pb-8 mb-4">
-                    {/* NEW: Processing Modal with Progress Bar */}
                     {loading && <ProcessingModal progress={progress} />}
-                    
                     {showRescueModal && <ApiKeyRescueModal onSave={handleRescueKey} onCancel={() => setShowRescueModal(false)} />}
-                    <h2 className="text-lg font-bold text-stone-700 mb-5 flex justify-between items-center">
-                        <span className="flex items-center"><i className={`fa-solid ${initialData ? 'fa-pen-to-square' : 'fa-plus-circle'} text-sage-400 mr-2`}></i>{initialData ? '修改花費' : '新增花費'}</span>
-                        <button type="button" onClick={() => fileRef.current.click()} className="text-sm bg-sage-50 text-sage-600 px-3 py-1.5 rounded-lg flex items-center gap-2 hover:bg-sage-100 transition-colors font-medium border border-sage-100">
-                            <i className="fa-solid fa-camera"></i>
-                            <span>拍收據</span>
-                        </button>
-                        <input type="file" ref={fileRef} accept="image/*" className="hidden" onChange={handleImageUpload} />
-                    </h2>
-
+                    <h2 className="text-lg font-bold text-stone-700 mb-5 flex justify-between items-center"><span className="flex items-center"><i className={`fa-solid ${initialData ? 'fa-pen-to-square' : 'fa-plus-circle'} text-sage-400 mr-2`}></i>{initialData ? '修改花費' : '新增花費'}</span><button type="button" onClick={() => fileRef.current.click()} className="text-sm bg-sage-50 text-sage-600 px-3 py-1.5 rounded-lg flex items-center gap-2 hover:bg-sage-100 transition-colors font-medium border border-sage-100"><i className="fa-solid fa-camera"></i><span>拍收據</span></button><input type="file" ref={fileRef} accept="image/*" className="hidden" onChange={handleImageUpload} /></h2>
                     {scannedItems.length > 0 ? (
                         <div className="mb-6 animate-fade-in">
-                            <div className="bg-sage-50/50 p-4 rounded-xl mb-4 border border-sage-100">
-                                <h3 className="font-bold text-sage-700 mb-3 text-sm"><i className="fa-solid fa-gear mr-1"></i> 全域設定</h3>
-                                <div className="grid grid-cols-3 gap-3">
-                                    <div><label className="input-label text-xs">幣別</label><select value={scanSettings.currency} onChange={e => setScanSettings({...scanSettings, currency: e.target.value})} className="input-field input-sm bg-white">{currencies.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
-                                    {scanSettings.currency !== 'TWD' && (<div><label className="input-label text-xs">匯率</label><input type="number" inputMode="decimal" value={scanSettings.exchangeRate} onChange={e => setScanSettings({...scanSettings, exchangeRate: e.target.value})} className="input-field input-sm" /></div>)}
-                                </div>
-                            </div>
-                            
-                            <div className="flex justify-between items-center mb-3">
-                                <span className="text-sm text-stone-500 font-medium">確認明細 ({selectedIndices.size}/{scannedItems.length})</span>
-                                <button 
-                                    type="button" 
-                                    onClick={toggleSelectAll} 
-                                    className={`text-xs px-3 py-1.5 rounded-full font-bold transition-all shadow-sm ${isAllSelected ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-sage-100 text-sage-700 border border-sage-200'}`}
-                                >
-                                    {isAllSelected ? '取消全選' : '全選'}
-                                </button>
-                            </div>
-                            
-                            <div className="space-y-3 max-h-[60vh] overflow-y-auto pb-2">
-                                {scannedItems.map((item, idx) => (
-                                    <div key={idx} className={`border rounded-xl p-3 transition-colors ${selectedIndices.has(idx) ? 'bg-white border-sage-300 shadow-sm' : 'bg-stone-50 border-stone-200 opacity-60'}`}>
-                                        <div className="flex gap-3">
-                                            <div className="pt-2">
-                                                <input type="checkbox" className="custom-checkbox flex-shrink-0" checked={selectedIndices.has(idx)} onChange={() => { const newSet = new Set(selectedIndices); if (newSet.has(idx)) newSet.delete(idx); else newSet.add(idx); setSelectedIndices(newSet); }} />
-                                            </div>
-                                            <div className="flex-1 min-w-0 flex flex-col gap-2">
-                                                {/* Full width item name input */}
-                                                <input value={item.name} onChange={(e) => updateScannedItem(idx, 'name', e.target.value)} className="border-b border-dashed border-stone-300 w-full text-sm bg-transparent font-medium focus:border-sage-400 focus:outline-none py-1 text-stone-700" placeholder="品名" />
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <select value={item.category} onChange={(e) => updateScannedItem(idx, 'category', e.target.value)} className="text-xs text-stone-500 bg-transparent border-none p-0 focus:ring-0 w-24">{categories.map(c => <option key={c} value={c}>{c}</option>)}</select>
-                                                    <div className="flex items-center gap-1 justify-end flex-1">
-                                                        <span className="text-xs text-stone-400 whitespace-nowrap">{scanSettings.currency}</span>
-                                                        <input type="number" value={item.amount} onChange={(e) => updateScannedItem(idx, 'amount', e.target.value)} className="border-b border-dashed border-stone-300 w-24 text-sm font-mono bg-transparent text-right focus:border-sage-400 focus:outline-none font-bold text-stone-700" />
-                                                    </div>
-                                                </div>
-                                                {scanSettings.currency !== 'TWD' && <div className="text-right text-xs text-sage-600 font-medium">≈ NT$ {Number(Math.round(item.amount * scanSettings.exchangeRate)).toLocaleString()}</div>}
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                            <div className="bg-sage-50/50 p-4 rounded-xl mb-4 border border-sage-100"><h3 className="font-bold text-sage-700 mb-3 text-sm"><i className="fa-solid fa-gear mr-1"></i> 全域設定</h3><div className="grid grid-cols-3 gap-3"><div><label className="input-label text-xs">幣別</label><select value={scanSettings.currency} onChange={e => setScanSettings({...scanSettings, currency: e.target.value})} className="input-field input-sm bg-white">{currencies.map(c => <option key={c} value={c}>{c}</option>)}</select></div>{scanSettings.currency !== 'TWD' && (<div><label className="input-label text-xs">匯率</label><input type="number" inputMode="decimal" value={scanSettings.exchangeRate} onChange={e => setScanSettings({...scanSettings, exchangeRate: e.target.value})} className="input-field input-sm" /></div>)}</div></div>
+                            <div className="flex justify-between items-center mb-3"><span className="text-sm text-stone-500 font-medium">確認明細 ({selectedIndices.size}/{scannedItems.length})</span><button type="button" onClick={toggleSelectAll} className={`text-xs px-3 py-1.5 rounded-full font-bold transition-all shadow-sm ${isAllSelected ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-sage-100 text-sage-700 border border-sage-200'}`}>{isAllSelected ? '取消全選' : '全選'}</button></div>
+                            <div className="space-y-3 max-h-[60vh] overflow-y-auto pb-2">{scannedItems.map((item, idx) => (<div key={idx} className={`border rounded-xl p-3 transition-colors ${selectedIndices.has(idx) ? 'bg-white border-sage-300 shadow-sm' : 'bg-stone-50 border-stone-200 opacity-60'}`}><div className="flex gap-3"><div className="pt-2"><input type="checkbox" className="custom-checkbox flex-shrink-0" checked={selectedIndices.has(idx)} onChange={() => { const newSet = new Set(selectedIndices); if (newSet.has(idx)) newSet.delete(idx); else newSet.add(idx); setSelectedIndices(newSet); }} /></div><div className="flex-1 min-w-0 flex flex-col gap-2"><input value={item.name} onChange={(e) => updateScannedItem(idx, 'name', e.target.value)} className="border-b border-dashed border-stone-300 w-full text-sm bg-transparent font-medium focus:border-sage-400 focus:outline-none py-1 text-stone-700" placeholder="品名" /><div className="flex items-center justify-between gap-2"><select value={item.category} onChange={(e) => updateScannedItem(idx, 'category', e.target.value)} className="text-xs text-stone-500 bg-transparent border-none p-0 focus:ring-0 w-24">{categories.map(c => <option key={c} value={c}>{c}</option>)}</select><div className="flex items-center gap-1 justify-end flex-1"><span className="text-xs text-stone-400 whitespace-nowrap">{scanSettings.currency}</span><input type="number" value={item.amount} onChange={(e) => updateScannedItem(idx, 'amount', e.target.value)} className="border-b border-dashed border-stone-300 w-24 text-sm font-mono bg-transparent text-right focus:border-sage-400 focus:outline-none font-bold text-stone-700" /></div></div>{scanSettings.currency !== 'TWD' && <div className="text-right text-xs text-sage-600 font-medium">≈ NT$ {Number(Math.round(item.amount * scanSettings.exchangeRate)).toLocaleString()}</div>}</div></div></div>))}</div>
                             <div className="mt-4 pt-4 border-t border-stone-100 flex gap-3"><button type="button" onClick={() => setScannedItems([])} className="flex-1 py-3 rounded-lg border border-stone-200 text-stone-600 font-medium text-sm hover:bg-stone-50">取消</button><button type="button" onClick={confirmBatchSave} className="flex-[2] py-3 rounded-lg bg-sage-400 text-white font-bold text-sm shadow-md hover:bg-sage-500 transition-colors">儲存選取項目</button></div>
                         </div>
                     ) : (
                         <div className="space-y-5">
-                            <div>
-                                <label className="input-label ml-1">分類</label>
-                                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 items-center cursor-grab active:cursor-grabbing" ref={categoryListRef}>
-                                    {categories.map(c => (
-                                        <button type="button" key={c} onClick={() => setForm({...form, category: c})} className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap border transition-all ${form.category === c ? 'bg-sage-400 text-white border-sage-400 shadow-sm transform scale-105' : 'bg-white text-stone-500 border-stone-200 hover:bg-stone-50'}`}>{c}</button>
-                                    ))}
-                                    {isAddingCat ? (
-                                        <div className="flex items-center gap-1">
-                                            <input autoFocus value={newCatName} onChange={(e) => setNewCatName(e.target.value)} className="px-3 py-1.5 rounded-lg text-sm border border-sage-300 w-24 outline-none shadow-sm" placeholder="名稱" onKeyDown={(e) => { if(e.key === 'Enter') handleConfirmAddCategory(); }} />
-                                            <button type="button" onClick={handleConfirmAddCategory} className="w-8 h-8 rounded-full bg-sage-400 text-white flex items-center justify-center shadow-sm"><i className="fa-solid fa-check"></i></button>
-                                            <button type="button" onClick={() => setIsAddingCat(false)} className="w-8 h-8 rounded-full bg-stone-200 text-stone-500 flex items-center justify-center"><i className="fa-solid fa-xmark"></i></button>
-                                        </div>
-                                    ) : (
-                                        <button type="button" onClick={() => setIsAddingCat(true)} className="px-3 py-2 rounded-lg text-sm whitespace-nowrap border border-dashed border-stone-300 text-stone-400 hover:bg-stone-50 hover:border-sage-300 hover:text-sage-500 transition-colors"><i className="fa-solid fa-plus"></i></button>
-                                    )}
-                                </div>
-                            </div>
-                            <div>
-                                <label className="input-label ml-1">品名</label>
-                                <div className="flex gap-2">
-                                    <input value={form.item} onChange={e => setForm({...form, item: e.target.value})} className="input-field" placeholder="例如：便利商店" />
-                                    <button type="button" onClick={handleSmartClassify} disabled={classifying || !form.item} className="bg-yellow-50 text-yellow-600 border border-yellow-200 px-3.5 rounded-lg flex items-center justify-center hover:bg-yellow-100 disabled:opacity-50 transition-colors shadow-sm" title="智慧分類">{classifying ? <div className="loader w-4 h-4 border-yellow-600 border-t-transparent"></div> : <i className="fa-solid fa-wand-magic-sparkles"></i>}</button>
-                                </div>
-                            </div>
+                            <div><label className="input-label ml-1">分類</label><div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 items-center cursor-grab active:cursor-grabbing" ref={categoryListRef}>{categories.map(c => (<button type="button" key={c} onClick={() => setForm({...form, category: c})} className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap border transition-all ${form.category === c ? 'bg-sage-400 text-white border-sage-400 shadow-sm transform scale-105' : 'bg-white text-stone-500 border-stone-200 hover:bg-stone-50'}`}>{c}</button>))}{isAddingCat ? (<div className="flex items-center gap-1"><input autoFocus value={newCatName} onChange={(e) => setNewCatName(e.target.value)} className="px-3 py-1.5 rounded-lg text-sm border border-sage-300 w-24 outline-none shadow-sm" placeholder="名稱" onKeyDown={(e) => { if(e.key === 'Enter') handleConfirmAddCategory(); }} /><button type="button" onClick={handleConfirmAddCategory} className="w-8 h-8 rounded-full bg-sage-400 text-white flex items-center justify-center shadow-sm"><i className="fa-solid fa-check"></i></button><button type="button" onClick={() => setIsAddingCat(false)} className="w-8 h-8 rounded-full bg-stone-200 text-stone-500 flex items-center justify-center"><i className="fa-solid fa-xmark"></i></button></div>) : (<button type="button" onClick={() => setIsAddingCat(true)} className="px-3 py-2 rounded-lg text-sm whitespace-nowrap border border-dashed border-stone-300 text-stone-400 hover:bg-stone-50 hover:border-sage-300 hover:text-sage-500 transition-colors"><i className="fa-solid fa-plus"></i></button>)}</div></div>
+                            <div><label className="input-label ml-1">品名</label><div className="flex gap-2"><input value={form.item} onChange={e => setForm({...form, item: e.target.value})} className="input-field" placeholder="例如：便利商店" /><button type="button" onClick={handleSmartClassify} disabled={classifying || !form.item} className="bg-yellow-50 text-yellow-600 border border-yellow-200 px-3.5 rounded-lg flex items-center justify-center hover:bg-yellow-100 disabled:opacity-50 transition-colors shadow-sm" title="智慧分類">{classifying ? <div className="loader w-4 h-4 border-yellow-600 border-t-transparent"></div> : <i className="fa-solid fa-wand-magic-sparkles"></i>}</button></div></div>
                             <div className="grid grid-cols-3 gap-3">
                                 <div><label className="input-label ml-1">幣別</label><select value={form.currency} onChange={e => setForm({...form, currency: e.target.value})} className="input-field bg-white">{currencies.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
-                                <div className="col-span-2"><label className="input-label ml-1">金額</label><input type="number" inputMode="decimal" value={form.foreignAmount} onChange={e => setForm({...form, foreignAmount: e.target.value})} className="input-field font-mono text-lg font-medium tracking-wide" placeholder="0.00" /></div>
-                            </div>
-                            {form.currency !== 'TWD' && (
-                                <div className="bg-sage-50/50 p-4 rounded-xl grid grid-cols-3 gap-3 border border-sage-100">
-                                    <div><label className="input-label text-xs">匯率</label><input type="number" inputMode="decimal" value={form.exchangeRate} onChange={e => setForm({...form, exchangeRate: e.target.value})} className="input-field text-sm p-2" /></div>
-                                    <div className="col-span-2"><label className="input-label text-xs text-sage-600">折合台幣</label><input value={form.twdAmount} readOnly className="input-field text-sage-600 font-bold bg-transparent border-none p-2 text-lg" /></div>
+                                <div className="col-span-2">
+                                    <label className="input-label ml-1">金額</label>
+                                    <input 
+                                        type="text" 
+                                        readOnly
+                                        value={form.foreignAmount} 
+                                        onClick={() => onOpenCalculator(form.foreignAmount, (val) => setForm(prev => ({ ...prev, foreignAmount: val })))}
+                                        className="input-field font-mono text-lg font-medium tracking-wide cursor-pointer bg-white" 
+                                        placeholder="點擊輸入金額" 
+                                    />
                                 </div>
-                            )}
+                            </div>
+                            {form.currency !== 'TWD' && (<div className="bg-sage-50/50 p-4 rounded-xl grid grid-cols-3 gap-3 border border-sage-100"><div><label className="input-label text-xs">匯率</label><input type="number" inputMode="decimal" value={form.exchangeRate} onChange={e => setForm({...form, exchangeRate: e.target.value})} className="input-field text-sm p-2" /></div><div className="col-span-2"><label className="input-label text-xs text-sage-600">折合台幣</label><input value={form.twdAmount} readOnly className="input-field text-sage-600 font-bold bg-transparent border-none p-2 text-lg" /></div></div>)}
                             <div className="flex gap-3 mt-8 pt-4 border-t border-stone-100"><button type="button" onClick={onCancel} className="btn-secondary">取消</button><button type="button" onClick={() => onSave(form)} className="btn-primary shadow-lg shadow-sage-200/50"><i className="fa-solid fa-check mr-2"></i>確認儲存</button></div>
                         </div>
                     )}
