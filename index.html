@@ -183,6 +183,46 @@
         const defaultCategories = ["飲食", "交通", "住宿", "購物", "門票", "其他"];
         const currencies = ["TWD", "JPY", "KRW", "USD", "EUR", "CNY", "THB", "VND"];
 
+        const loadGeminiKeys = () => {
+            try {
+                const saved = JSON.parse(localStorage.getItem('gemini_api_keys') || '[]');
+                if (Array.isArray(saved) && saved.some(Boolean)) return saved.slice(0, 3).map(key => String(key || '').trim());
+            } catch (e) {}
+            const legacyKey = (localStorage.getItem('gemini_api_key') || '').trim();
+            return legacyKey ? [legacyKey, '', ''] : ['', '', ''];
+        };
+
+        const callGemini = async (apiKeys, requestBody, timeoutMs = 30000) => {
+            const validKeys = (apiKeys || []).map(key => String(key || '').trim()).filter(Boolean);
+            if (validKeys.length === 0) throw new Error('請先設定至少一組 Gemini API Key');
+            const savedIndex = Number(localStorage.getItem('gemini_active_key_index') || 0) % validKeys.length;
+            let lastError;
+            for (let attempt = 0; attempt < validKeys.length; attempt++) {
+                const keyIndex = (savedIndex + attempt) % validKeys.length;
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), timeoutMs);
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${encodeURIComponent(validKeys[keyIndex])}`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody), signal: controller.signal
+                    });
+                    const data = await response.json();
+                    if (!response.ok || data.error) {
+                        const status = response.status || data.error?.code || 0;
+                        const retryable = [400, 401, 403, 429].includes(status) || status >= 500;
+                        lastError = new Error(data.error?.message || `Gemini API 錯誤 (${status})`);
+                        if (retryable && attempt < validKeys.length - 1) continue;
+                        throw lastError;
+                    }
+                    localStorage.setItem('gemini_active_key_index', String(keyIndex));
+                    return data;
+                } catch (error) {
+                    lastError = error.name === 'AbortError' ? new Error('Gemini 連線逾時') : error;
+                    if (attempt >= validKeys.length - 1) throw lastError;
+                } finally { clearTimeout(timeout); }
+            }
+            throw lastError || new Error('所有 Gemini API Key 均無法使用');
+        };
+
         // --- 3. 輔助功能 ---
         const formatMoney = (amount, currency = 'TWD') => {
             if (currency === 'TWD') return `NT$ ${new Intl.NumberFormat('zh-TW', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount)}`;
@@ -219,7 +259,7 @@
             const [projects, setProjects] = React.useState([]);
             const [projectTotals, setProjectTotals] = React.useState({});
             const [installPrompt, setInstallPrompt] = React.useState(null);
-            const [apiKey, setApiKey] = React.useState((localStorage.getItem('gemini_api_key') || '').trim());
+            const [apiKeys, setApiKeys] = React.useState(loadGeminiKeys);
             const [expenses, setExpenses] = React.useState([]);
             const [editItem, setEditItem] = React.useState(null);
             const [filterCategory, setFilterCategory] = React.useState('All');
@@ -418,13 +458,15 @@
                 } catch (e) { showAlert("還原失敗：" + e.message, "錯誤"); }
             };
 
-            const handleUpdateKey = (newKey) => {
-                if (newKey && newKey.trim() !== '') {
-                    setApiKey(newKey.trim());
-                    localStorage.setItem('gemini_api_key', newKey.trim());
-                    return true;
-                }
-                return false;
+            const handleUpdateKeys = (newKeys) => {
+                const cleaned = (Array.isArray(newKeys) ? newKeys : [newKeys]).slice(0, 3).map(key => String(key || '').trim());
+                while (cleaned.length < 3) cleaned.push('');
+                if (!cleaned.some(Boolean)) return false;
+                setApiKeys(cleaned);
+                localStorage.setItem('gemini_api_keys', JSON.stringify(cleaned));
+                localStorage.removeItem('gemini_api_key');
+                localStorage.setItem('gemini_active_key_index', '0');
+                return true;
             };
 
             const saveCategoriesToDb = async (newCats) => {
@@ -570,7 +612,7 @@
                         ) : view === 'login' ? (
                             <GoogleLoginView onLogin={handleGoogleLogin} />
                         ) : view === 'projects' ? (
-                            <ProjectsView user={user} projects={projects} projectTotals={projectTotals} apiKey={apiKey} onUpdateKey={handleUpdateKey} onCreate={handleCreateProject} onOpen={handleOpenProject} onLogout={() => auth.signOut()} onInstall={handleInstallApp} onBackup={handleBackup} onRestore={handleRestore} />
+                            <ProjectsView user={user} projects={projects} projectTotals={projectTotals} apiKeys={apiKeys} onUpdateKeys={handleUpdateKeys} onCreate={handleCreateProject} onOpen={handleOpenProject} onLogout={() => auth.signOut()} onInstall={handleInstallApp} onBackup={handleBackup} onRestore={handleRestore} />
                         ) : (
                             <>
                                 {view === 'list' && (
@@ -599,10 +641,10 @@
 
                                 <div className="p-3 pt-3 pb-24">
                                     {view === 'list' && <ExpenseList expenses={filteredExpenses} onEdit={(item) => { setEditItem(item); setView('add'); }} onDelete={handleDelete} />}
-                                    {view === 'add' && <AddForm apiKey={apiKey} onUpdateKey={handleUpdateKey} categories={categories} onAddCategory={handleAddCategory} initialData={editItem} onSave={handleSave} onBatchSave={handleBatchSave} onCancel={() => { setView('list'); setEditItem(null); }} showAlert={showAlert} onOpenCalculator={openCalculator} />}
+                                    {view === 'add' && <AddForm apiKeys={apiKeys} onUpdateKeys={handleUpdateKeys} categories={categories} onAddCategory={handleAddCategory} initialData={editItem} onSave={handleSave} onBatchSave={handleBatchSave} onCancel={() => { setView('list'); setEditItem(null); }} showAlert={showAlert} onOpenCalculator={openCalculator} />}
                                 </div>
 
-                                {showAnalysis && <AnalysisModal expenses={expenses} apiKey={apiKey} onClose={() => setShowAnalysis(false)} />}
+                                {showAnalysis && <AnalysisModal expenses={expenses} apiKeys={apiKeys} onClose={() => setShowAnalysis(false)} />}
                                 {showStats && <StatsModal expenses={expenses} onClose={() => setShowStats(false)} />}
                                 {showCatManager && <CategoryManagerModal categories={categories} onAdd={handleAddCategory} onReorder={handleReorderCategories} onEdit={handleEditCategory} onDelete={handleDeleteCategory} onClose={() => setShowCatManager(false)} />}
                             </>
@@ -743,9 +785,10 @@
             </div>
         );
 
-        const ProjectsView = ({ user, projects, projectTotals, apiKey, onUpdateKey, onCreate, onOpen, onLogout, onInstall, onBackup, onRestore }) => {
+        const ProjectsView = ({ user, projects, projectTotals, apiKeys, onUpdateKeys, onCreate, onOpen, onLogout, onInstall, onBackup, onRestore }) => {
             const [name, setName] = React.useState('');
-            const [key, setKey] = React.useState(apiKey || '');
+            const [keys, setKeys] = React.useState(apiKeys || ['', '', '']);
+            const [keysSaved, setKeysSaved] = React.useState(false);
             const restoreInput = React.useRef(null);
             const create = async () => { if (!name.trim()) return; await onCreate(name); setName(''); };
             return (
@@ -771,7 +814,7 @@
                         <h2 className="font-bold text-stone-700 mb-2">我的專案</h2>
                         {projects.length === 0 ? <div className="text-center py-10 text-stone-400 card-soft"><i className="fa-regular fa-folder-open text-3xl mb-3 block"></i><p className="text-sm">還沒有專案，建立第一趟旅程吧！</p></div> : <div className="space-y-2">{projects.map(project => <button key={project.id} onClick={() => onOpen(project)} className="card-soft p-4 w-full text-left flex items-center justify-between hover:border-ink-300 transition-colors"><div className="min-w-0"><p className="font-bold text-stone-700 truncate">{project.name}</p><p className="text-[10px] text-stone-400 mt-1">{project.createdAt?.seconds ? new Date(project.createdAt.seconds * 1000).toLocaleDateString('zh-TW') : '剛剛建立'}</p></div><div className="flex items-center gap-3 flex-shrink-0 ml-3"><div className="text-right"><p className="text-[10px] text-stone-400">總支出</p><p className="font-extrabold text-ink-600">NT$ {Number(projectTotals?.[project.id] || 0).toLocaleString('zh-TW', { maximumFractionDigits: 0 })}</p></div><i className="fa-solid fa-chevron-right text-stone-300"></i></div></button>)}</div>}
                     </div>
-                    <details className="card-soft p-4"><summary className="text-xs font-semibold text-stone-500 cursor-pointer">AI 掃描設定（Gemini API Key）</summary><div className="flex gap-2 mt-3"><input type="password" value={key} onChange={e => setKey(e.target.value)} className="input-field text-sm" placeholder="貼上 Gemini API Key" /><button onClick={() => onUpdateKey(key)} className="bg-stone-100 text-stone-600 rounded-xl px-4 text-sm">儲存</button></div></details>
+                    <details className="card-soft p-4"><summary className="text-xs font-semibold text-stone-500 cursor-pointer">AI 掃描設定（最多 3 組 Gemini API Key）</summary><div className="space-y-2 mt-3">{[0, 1, 2].map(index => <div key={index} className="flex items-center gap-2"><span className="text-[10px] font-bold text-stone-400 w-5">{index + 1}</span><input type="password" value={keys[index] || ''} onChange={e => { const next = [...keys]; next[index] = e.target.value; setKeys(next); setKeysSaved(false); }} className="input-field text-sm" placeholder={`Gemini API Key ${index + 1}${index === 0 ? '（必填）' : '（選填）'}`} /></div>)}<p className="text-[10px] text-stone-400 leading-relaxed">呼叫失敗時會自動嘗試下一組，成功後記住可用的 Key。金鑰只儲存在這台裝置。</p><button onClick={() => { if (onUpdateKeys(keys)) { setKeysSaved(true); setTimeout(() => setKeysSaved(false), 2500); } }} className="btn-secondary py-2 text-sm">{keysSaved ? <><i className="fa-solid fa-check text-green-500 mr-1"></i>已儲存</> : '儲存 API Keys'}</button></div></details>
                 </div>
             );
         };
@@ -1039,19 +1082,17 @@
             );
         };
 
-        const AnalysisModal = ({ expenses, apiKey, onClose }) => {
+        const AnalysisModal = ({ expenses, apiKeys, onClose }) => {
             const [analysis, setAnalysis] = React.useState('');
             const [loading, setLoading] = React.useState(true);
             React.useEffect(() => {
                 const analyze = async () => {
                     if (expenses.length === 0) { setAnalysis("無資料可分析"); setLoading(false); return; }
-                    if (!apiKey) { setAnalysis("請設定 API Key"); setLoading(false); return; }
+                    if (!apiKeys?.some(Boolean)) { setAnalysis("請設定 API Key"); setLoading(false); return; }
                     try {
                         const simpleData = expenses.map(e => `${e.category}: ${e.item} (${e.twdAmount} TWD)`).join('\n');
                         const prompt = `你是專業的旅遊財務顧問。請根據以下消費清單生成約 150 字的繁體中文分析報告，包含最大支出、消費習慣與省錢建議。資料：\n${simpleData}`;
-                        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
-                        const data = await response.json();
-                        if (data.error) throw new Error(data.error.message);
+                        const data = await callGemini(apiKeys, { contents: [{ parts: [{ text: prompt }] }] });
                         setAnalysis(data.candidates[0].content.parts[0].text);
                     } catch (e) { setAnalysis("分析失敗：" + e.message); } finally { setLoading(false); }
                 };
@@ -1097,7 +1138,7 @@
             );
         };
 
-        const AddForm = ({ apiKey, onUpdateKey, categories, onAddCategory, initialData, onSave, onBatchSave, onCancel, showAlert, onOpenCalculator }) => {
+        const AddForm = ({ apiKeys, onUpdateKeys, categories, onAddCategory, initialData, onSave, onBatchSave, onCancel, showAlert, onOpenCalculator }) => {
             const [form, setForm] = React.useState({ category: '飲食', item: '', currency: 'JPY', foreignAmount: '', exchangeRate: 0.22, twdAmount: '' });
             const [loading, setLoading] = React.useState(false);
             const [scannedItems, setScannedItems] = React.useState([]); 
@@ -1128,12 +1169,11 @@
 
             const handleSmartClassify = async () => {
                 if (!form.item.trim()) return showAlert("請先輸入品名");
-                if (!apiKey) return showAlert("請先設定 API Key");
+                if (!apiKeys?.some(Boolean)) return showAlert("請先設定 API Key");
                 setClassifying(true);
                 try {
                     const prompt = `請將「${form.item}」歸類為以下其中之一：${categories.join(', ')}。只回傳分類名稱，不要有其他文字。如果無法判斷，回傳「其他」。`;
-                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
-                    const data = await response.json();
+                    const data = await callGemini(apiKeys, { contents: [{ parts: [{ text: prompt }] }] });
                     if (data.candidates && data.candidates[0].content) {
                         const predictedCat = data.candidates[0].content.parts[0].text.trim();
                         if (categories.includes(predictedCat)) setForm(prev => ({ ...prev, category: predictedCat }));
@@ -1147,37 +1187,23 @@
             const handleImageUpload = async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
-                const currentKey = apiKey ? apiKey.trim() : "";
-                if (!currentKey) { setShowRescueModal(true); e.target.value = ''; return; }
+                if (!apiKeys?.some(Boolean)) { setShowRescueModal(true); e.target.value = ''; return; }
                 
                 setLoading(true); setProgress(5);
                 const interval = setInterval(() => { setProgress(prev => { if (prev >= 90) return 90; return prev + (prev < 60 ? 5 : 2); }); }, 200);
-                
-                // --- Timeout Controller ---
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 seconds timeout
-                
+
                 try {
-                    const reader = new FileReader();
-                    reader.readAsDataURL(file);
-                    reader.onload = async () => {
-                        const base64Data = reader.result.split(',')[1];
-                        const prompt = `你是一個記帳助手。請辨識這張收據上的每一筆消費項目。原則：1. 翻譯成繁體中文。2. 辨識商店名稱。3. 列出折後金額。4. 折扣若無法歸屬則列為負數。回傳 JSON: { "store": "商店名", "currency": "幣別", "items": [ { "name": "品名", "amount": 數字, "category": "分類" } ] }`;
-                        
-                        try {
-                            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${currentKey}`, { 
-                                method: 'POST', 
-                                headers: { 'Content-Type': 'application/json' }, 
-                                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: file.type, data: base64Data } }] }] }),
-                                signal: controller.signal // Bind signal
-                            });
-                            
-                            clearTimeout(timeoutId); // Clear timeout on success
-                            
-                            const data = await response.json();
+                    const dataUrl = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result);
+                        reader.onerror = () => reject(new Error('無法讀取圖片'));
+                        reader.readAsDataURL(file);
+                    });
+                    const base64Data = dataUrl.split(',')[1];
+                    const prompt = `你是一個記帳助手。請辨識這張收據上的每一筆消費項目。原則：1. 翻譯成繁體中文。2. 辨識商店名稱。3. 列出折後金額。4. 折扣若無法歸屬則列為負數。回傳 JSON: { "store": "商店名", "currency": "幣別", "items": [ { "name": "品名", "amount": 數字, "category": "分類" } ] }`;
+                    const data = await callGemini(apiKeys, { contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: file.type, data: base64Data } }] }] }, 30000);
                             clearInterval(interval); setProgress(100);
-                            
-                            if (data.error) { if (data.error.code === 400 && data.error.message.includes("API key")) { setLoading(false); setShowRescueModal(true); return; } throw new Error(`API 錯誤: ${data.error.message}`); }
+
                             if (!data.candidates || !data.candidates[0].content) throw new Error("AI 未回傳結果");
                             
                             const text = data.candidates[0].content.parts[0].text;
@@ -1208,17 +1234,8 @@
                                 setLoading(false);
                             }, 500);
 
-                        } catch (fetchError) {
-                            if (fetchError.name === 'AbortError') {
-                                throw new Error("連線逾時 (30秒)。請檢查網路或稍後再試。");
-                            } else {
-                                throw fetchError;
-                            }
-                        }
-                    };
-                } catch (error) { 
-                    clearTimeout(timeoutId);
-                    clearInterval(interval); 
+                } catch (error) {
+                    clearInterval(interval);
                     setLoading(false); 
                     console.error(error); 
                     showAlert("辨識失敗: " + error.message, "錯誤"); 
@@ -1227,7 +1244,7 @@
 
             const updateScannedItem = (index, field, value) => { const newItems = [...scannedItems]; newItems[index] = { ...newItems[index], [field]: value }; setScannedItems(newItems); };
             const confirmBatchSave = () => { const selectedItems = scannedItems.filter((_, i) => selectedIndices.has(i)); if (selectedItems.length === 0) return showAlert("請至少選擇一個項目"); const itemsToSave = selectedItems.map(item => { let twd = scanSettings.currency === 'TWD' ? Number(item.amount) : Math.round(Number(item.amount) * Number(scanSettings.exchangeRate)); return { item: item.name, category: item.category, currency: scanSettings.currency, foreignAmount: item.amount, exchangeRate: scanSettings.currency === 'TWD' ? 1 : scanSettings.exchangeRate, twdAmount: twd }; }); onBatchSave(itemsToSave); setScannedItems([]); };
-            const handleRescueKey = (newKey) => { if (onUpdateKey(newKey)) { setShowRescueModal(false); alert("Key 已更新！請再次點擊「拍收據」重試。"); } };
+            const handleRescueKey = (newKey) => { if (onUpdateKeys([newKey, '', ''])) { setShowRescueModal(false); alert("Key 已更新！請再次點擊「拍收據」重試。"); } };
             const isAllSelected = scannedItems.length > 0 && selectedIndices.size === scannedItems.length;
             const toggleSelectAll = () => { if (isAllSelected) setSelectedIndices(new Set()); else setSelectedIndices(new Set(scannedItems.map((_, i) => i))); };
 
