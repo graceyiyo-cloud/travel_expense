@@ -223,6 +223,37 @@
             throw lastError || new Error('所有 Gemini API Key 均無法使用');
         };
 
+        const bytesToBase64 = bytes => {
+            let binary = '';
+            bytes.forEach(byte => binary += String.fromCharCode(byte));
+            return btoa(binary);
+        };
+        const base64ToBytes = value => Uint8Array.from(atob(value), char => char.charCodeAt(0));
+        const deriveEncryptionKey = async (password, salt, usages) => {
+            const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+            return crypto.subtle.deriveKey(
+                { name: 'PBKDF2', salt, iterations: 250000, hash: 'SHA-256' },
+                material, { name: 'AES-GCM', length: 256 }, false, usages
+            );
+        };
+        const encryptGeminiKeys = async (keys, password) => {
+            const salt = crypto.getRandomValues(new Uint8Array(16));
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const key = await deriveEncryptionKey(password, salt, ['encrypt']);
+            const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(keys)));
+            return { version: 1, algorithm: 'AES-GCM', kdf: 'PBKDF2-SHA256', iterations: 250000, salt: bytesToBase64(salt), iv: bytesToBase64(iv), ciphertext: bytesToBase64(new Uint8Array(encrypted)) };
+        };
+        const decryptGeminiKeys = async (vault, password) => {
+            if (!vault || vault.version !== 1) throw new Error('不支援的加密資料格式');
+            const salt = base64ToBytes(vault.salt);
+            const iv = base64ToBytes(vault.iv);
+            const key = await deriveEncryptionKey(password, salt, ['decrypt']);
+            const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, base64ToBytes(vault.ciphertext));
+            const keys = JSON.parse(new TextDecoder().decode(decrypted));
+            if (!Array.isArray(keys)) throw new Error('金鑰資料格式錯誤');
+            return keys;
+        };
+
         // --- 3. 輔助功能 ---
         const formatMoney = (amount, currency = 'TWD') => {
             if (currency === 'TWD') return `NT$ ${new Intl.NumberFormat('zh-TW', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount)}`;
@@ -469,6 +500,29 @@
                 return true;
             };
 
+            const handleCloudSaveKeys = async (password, keys) => {
+                if (!password || password.length < 4) throw new Error('同步密碼至少需要 4 個字元');
+                const cleaned = (keys || []).slice(0, 3).map(key => String(key || '').trim());
+                if (!cleaned.some(Boolean)) throw new Error('請先輸入至少一組 API Key');
+                const vault = await encryptGeminiKeys(cleaned, password);
+                await db.collection('users').doc(user.uid).collection('settings').doc('gemini_keys').set({ vault, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+                handleUpdateKeys(cleaned);
+            };
+
+            const handleCloudLoadKeys = async (password) => {
+                if (!password) throw new Error('請輸入同步密碼');
+                const doc = await db.collection('users').doc(user.uid).collection('settings').doc('gemini_keys').get();
+                if (!doc.exists || !doc.data().vault) throw new Error('雲端尚未儲存 API Keys');
+                try {
+                    const decryptedKeys = await decryptGeminiKeys(doc.data().vault, password);
+                    handleUpdateKeys(decryptedKeys);
+                    return decryptedKeys;
+                } catch (e) {
+                    if (e.name === 'OperationError') throw new Error('同步密碼不正確，無法解密');
+                    throw e;
+                }
+            };
+
             const saveCategoriesToDb = async (newCats) => {
                 setCategories(newCats); 
                 localStorage.setItem(`categories_${tripId}`, JSON.stringify(newCats)); 
@@ -612,7 +666,7 @@
                         ) : view === 'login' ? (
                             <GoogleLoginView onLogin={handleGoogleLogin} />
                         ) : view === 'projects' ? (
-                            <ProjectsView user={user} projects={projects} projectTotals={projectTotals} apiKeys={apiKeys} onUpdateKeys={handleUpdateKeys} onCreate={handleCreateProject} onOpen={handleOpenProject} onLogout={() => auth.signOut()} onInstall={handleInstallApp} onBackup={handleBackup} onRestore={handleRestore} />
+                            <ProjectsView user={user} projects={projects} projectTotals={projectTotals} apiKeys={apiKeys} onUpdateKeys={handleUpdateKeys} onCloudSaveKeys={handleCloudSaveKeys} onCloudLoadKeys={handleCloudLoadKeys} onCreate={handleCreateProject} onOpen={handleOpenProject} onLogout={() => auth.signOut()} onInstall={handleInstallApp} onBackup={handleBackup} onRestore={handleRestore} />
                         ) : (
                             <>
                                 {view === 'list' && (
@@ -785,12 +839,27 @@
             </div>
         );
 
-        const ProjectsView = ({ user, projects, projectTotals, apiKeys, onUpdateKeys, onCreate, onOpen, onLogout, onInstall, onBackup, onRestore }) => {
+        const ProjectsView = ({ user, projects, projectTotals, apiKeys, onUpdateKeys, onCloudSaveKeys, onCloudLoadKeys, onCreate, onOpen, onLogout, onInstall, onBackup, onRestore }) => {
             const [name, setName] = React.useState('');
             const [keys, setKeys] = React.useState(apiKeys || ['', '', '']);
             const [keysSaved, setKeysSaved] = React.useState(false);
+            const [syncPassword, setSyncPassword] = React.useState('');
+            const [syncStatus, setSyncStatus] = React.useState('');
+            const [syncing, setSyncing] = React.useState(false);
             const restoreInput = React.useRef(null);
             const create = async () => { if (!name.trim()) return; await onCreate(name); setName(''); };
+            const saveKeysToCloud = async () => {
+                setSyncing(true); setSyncStatus('');
+                try { await onCloudSaveKeys(syncPassword, keys); setSyncStatus('已加密同步到雲端'); }
+                catch (e) { setSyncStatus(e.message); }
+                finally { setSyncing(false); }
+            };
+            const loadKeysFromCloud = async () => {
+                setSyncing(true); setSyncStatus('');
+                try { const loaded = await onCloudLoadKeys(syncPassword); setKeys(loaded); setSyncStatus('已從雲端解密還原'); }
+                catch (e) { setSyncStatus(e.message); }
+                finally { setSyncing(false); }
+            };
             return (
                 <div className="flex-grow p-5 w-full">
                     <div className="flex items-center justify-between mb-6">
@@ -814,7 +883,24 @@
                         <h2 className="font-bold text-stone-700 mb-2">我的專案</h2>
                         {projects.length === 0 ? <div className="text-center py-10 text-stone-400 card-soft"><i className="fa-regular fa-folder-open text-3xl mb-3 block"></i><p className="text-sm">還沒有專案，建立第一趟旅程吧！</p></div> : <div className="space-y-2">{projects.map(project => <button key={project.id} onClick={() => onOpen(project)} className="card-soft p-4 w-full text-left flex items-center justify-between hover:border-ink-300 transition-colors"><div className="min-w-0"><p className="font-bold text-stone-700 truncate">{project.name}</p><p className="text-[10px] text-stone-400 mt-1">{project.createdAt?.seconds ? new Date(project.createdAt.seconds * 1000).toLocaleDateString('zh-TW') : '剛剛建立'}</p></div><div className="flex items-center gap-3 flex-shrink-0 ml-3"><div className="text-right"><p className="text-[10px] text-stone-400">總支出</p><p className="font-extrabold text-ink-600">NT$ {Number(projectTotals?.[project.id] || 0).toLocaleString('zh-TW', { maximumFractionDigits: 0 })}</p></div><i className="fa-solid fa-chevron-right text-stone-300"></i></div></button>)}</div>}
                     </div>
-                    <details className="card-soft p-4"><summary className="text-xs font-semibold text-stone-500 cursor-pointer">AI 掃描設定（最多 3 組 Gemini API Key）</summary><div className="space-y-2 mt-3">{[0, 1, 2].map(index => <div key={index} className="flex items-center gap-2"><span className="text-[10px] font-bold text-stone-400 w-5">{index + 1}</span><input type="password" value={keys[index] || ''} onChange={e => { const next = [...keys]; next[index] = e.target.value; setKeys(next); setKeysSaved(false); }} className="input-field text-sm" placeholder={`Gemini API Key ${index + 1}${index === 0 ? '（必填）' : '（選填）'}`} /></div>)}<p className="text-[10px] text-stone-400 leading-relaxed">呼叫失敗時會自動嘗試下一組，成功後記住可用的 Key。金鑰只儲存在這台裝置。</p><button onClick={() => { if (onUpdateKeys(keys)) { setKeysSaved(true); setTimeout(() => setKeysSaved(false), 2500); } }} className="btn-secondary py-2 text-sm">{keysSaved ? <><i className="fa-solid fa-check text-green-500 mr-1"></i>已儲存</> : '儲存 API Keys'}</button></div></details>
+                    <details className="card-soft p-4">
+                        <summary className="text-xs font-semibold text-stone-500 cursor-pointer">AI 掃描設定（最多 3 組 Gemini API Key）</summary>
+                        <div className="space-y-2 mt-3">
+                            {[0, 1, 2].map(index => <div key={index} className="flex items-center gap-2"><span className="text-[10px] font-bold text-stone-400 w-5">{index + 1}</span><input type="password" value={keys[index] || ''} onChange={e => { const next = [...keys]; next[index] = e.target.value; setKeys(next); setKeysSaved(false); }} className="input-field text-sm" placeholder={`Gemini API Key ${index + 1}${index === 0 ? '（必填）' : '（選填）'}`} /></div>)}
+                            <p className="text-[10px] text-stone-400 leading-relaxed">呼叫失敗時會自動嘗試下一組，成功後記住可用的 Key。</p>
+                            <button onClick={() => { if (onUpdateKeys(keys)) { setKeysSaved(true); setTimeout(() => setKeysSaved(false), 2500); } }} className="btn-secondary py-2 text-sm">{keysSaved ? <><i className="fa-solid fa-check text-green-500 mr-1"></i>已儲存在此裝置</> : '儲存在此裝置'}</button>
+                            <div className="border-t border-paper-200 pt-3 mt-3">
+                                <label className="input-label">跨裝置加密同步密碼</label>
+                                <input type="password" value={syncPassword} onChange={e => { setSyncPassword(e.target.value); setSyncStatus(''); }} className="input-field text-sm" placeholder="至少 4 個字元，請務必記住" autoComplete="new-password" minLength="4" />
+                                <div className="grid grid-cols-2 gap-2 mt-2">
+                                    <button disabled={syncing} onClick={saveKeysToCloud} className="btn-secondary py-2 text-xs disabled:opacity-50"><i className="fa-solid fa-cloud-arrow-up mr-1"></i>加密同步</button>
+                                    <button disabled={syncing} onClick={loadKeysFromCloud} className="btn-secondary py-2 text-xs disabled:opacity-50"><i className="fa-solid fa-cloud-arrow-down mr-1"></i>雲端還原</button>
+                                </div>
+                                {syncStatus && <p className={`text-[10px] mt-2 ${syncStatus.includes('已') ? 'text-green-600' : 'text-red-500'}`}>{syncStatus}</p>}
+                                <p className="text-[10px] text-clay-500 mt-2 leading-relaxed"><i className="fa-solid fa-shield-halved mr-1"></i>同步密碼不會上傳；忘記密碼就無法解密雲端金鑰。</p>
+                            </div>
+                        </div>
+                    </details>
                 </div>
             );
         };
