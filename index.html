@@ -204,12 +204,13 @@
         // --- 4. 主程式 ---
         const App = () => {
             const [user, setUser] = React.useState(null);
-            const [view, setView] = React.useState('login'); 
+            const [authLoading, setAuthLoading] = React.useState(true);
+            const [view, setView] = React.useState('login');
             const [tripId, setTripId] = React.useState('');
+            const [projects, setProjects] = React.useState([]);
             const [apiKey, setApiKey] = React.useState((localStorage.getItem('gemini_api_key') || '').trim());
             const [expenses, setExpenses] = React.useState([]);
             const [editItem, setEditItem] = React.useState(null);
-            const [loginHistory, setLoginHistory] = React.useState([]);
             const [filterCategory, setFilterCategory] = React.useState('All');
             const [searchTerm, setSearchTerm] = React.useState(''); 
             const [showSearchBar, setShowSearchBar] = React.useState(false); 
@@ -228,17 +229,28 @@
             const [categories, setCategories] = React.useState(defaultCategories);
 
             React.useEffect(() => {
-                auth.signInAnonymously().catch(e => console.error("Auth:", e));
-                auth.onAuthStateChanged(u => setUser(u));
-                try {
-                    const history = JSON.parse(localStorage.getItem('login_history') || '[]');
-                    setLoginHistory(history);
-                } catch(e) { console.error("Error loading history", e); }
+                return auth.onAuthStateChanged(u => {
+                    setUser(u);
+                    setAuthLoading(false);
+                    setView(u ? 'projects' : 'login');
+                    if (!u) { setTripId(''); setProjects([]); setExpenses([]); }
+                });
             }, []);
 
             React.useEffect(() => {
+                if (!user) return;
+                return db.collection('users').doc(user.uid).collection('projects')
+                    .orderBy('updatedAt', 'desc').onSnapshot(snap => {
+                        setProjects(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+                    }, e => showAlert("讀取專案失敗：" + e.message, "錯誤"));
+            }, [user]);
+
+            const projectRef = (id = tripId) => db.collection('users').doc(user.uid).collection('projects').doc(id);
+            const expensesRef = (id = tripId) => projectRef(id).collection('expenses');
+
+            React.useEffect(() => {
                 if (!user || !tripId) return;
-                const settingsRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('trip_settings').doc(tripId);
+                const settingsRef = projectRef();
                 const unsubCats = settingsRef.onSnapshot(doc => {
                     if (doc.exists && doc.data().categories) {
                         const remoteCats = doc.data().categories;
@@ -257,7 +269,7 @@
                     }
                 });
 
-                const ref = db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`${tripId}_simple_v1`);
+                const ref = expensesRef();
                 const unsubExp = ref.orderBy('createdAt', 'asc').onSnapshot(snap => {
                     const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                     setExpenses(data);
@@ -279,28 +291,28 @@
                 setDialog({ show: true, type: 'prompt', title, msg, onConfirm: (val) => { setDialog(prev => ({...prev, show: false})); setTimeout(() => onConfirm(val), 50); } });
             };
 
-            const handleLogin = (code, key) => {
-                if (!code.trim()) return showAlert("請輸入代號", "錯誤");
-                const upperCode = code.toUpperCase().trim();
-                setTripId(upperCode);
-                
-                if (key && key.trim() !== '') {
-                    const cleanKey = key.trim();
-                    setApiKey(cleanKey);
-                    localStorage.setItem('gemini_api_key', cleanKey);
+            const handleGoogleLogin = async () => {
+                try {
+                    const provider = new firebase.auth.GoogleAuthProvider();
+                    provider.setCustomParameters({ prompt: 'select_account' });
+                    await auth.signInWithPopup(provider);
+                } catch (e) {
+                    if (e.code !== 'auth/popup-closed-by-user') showAlert("Google 登入失敗：" + e.message, "錯誤");
                 }
-                
-                const newHistory = [upperCode, ...loginHistory.filter(h => h !== upperCode)].slice(0, 5);
-                setLoginHistory(newHistory);
-                localStorage.setItem('login_history', JSON.stringify(newHistory));
-                setView('list');
             };
 
-            const handleDeleteHistory = (e, codeToDelete) => {
-                e.stopPropagation(); 
-                const newHistory = loginHistory.filter(h => h !== codeToDelete);
-                setLoginHistory(newHistory);
-                localStorage.setItem('login_history', JSON.stringify(newHistory));
+            const handleCreateProject = async (name) => {
+                const cleanName = (name || '').trim();
+                if (!cleanName) return showAlert("請輸入專案名稱", "錯誤");
+                const id = db.collection('_').doc().id;
+                try {
+                    await projectRef(id).set({ name: cleanName, categories: defaultCategories, createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+                    setTripId(id); setCategories(defaultCategories); setView('list');
+                } catch (e) { showAlert("新增專案失敗：" + e.message, "錯誤"); }
+            };
+
+            const handleOpenProject = (project) => {
+                setTripId(project.id); setCategories(project.categories || defaultCategories); setView('list');
             };
 
             const handleUpdateKey = (newKey) => {
@@ -316,7 +328,7 @@
                 setCategories(newCats); 
                 localStorage.setItem(`categories_${tripId}`, JSON.stringify(newCats)); 
                 if (tripId && appId) {
-                    try { await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('trip_settings').doc(tripId).set({ categories: newCats }, { merge: true }); } catch(e) { console.error(e); }
+                    try { await projectRef().set({ categories: newCats, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }); } catch(e) { console.error(e); }
                 }
             };
 
@@ -329,7 +341,7 @@
                 const batch = db.batch();
                 const relatedExpenses = expenses.filter(e => e.category === oldName);
                 if (relatedExpenses.length > 0) {
-                    const ref = db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`${tripId}_simple_v1`);
+                    const ref = expensesRef();
                     relatedExpenses.forEach(exp => batch.update(ref.doc(exp.id), { category: newName }));
                     try { await batch.commit(); showAlert(`已更新 ${relatedExpenses.length} 筆資料分類`, "成功"); } catch(e) { showAlert("更新失敗", "錯誤"); }
                 }
@@ -347,68 +359,22 @@
             };
 
             const handleRenameProject = () => {
-                showPrompt(`請輸入新的專案名稱：\n(注意：這將會把目前「${tripId}」的所有資料搬移到新名稱)`, async (newName) => {
+                const currentName = projects.find(p => p.id === tripId)?.name || '';
+                showPrompt(`目前專案名稱：${currentName}\n請輸入新的專案名稱：`, async (newName) => {
                     if (!newName || newName.trim() === '') return;
-                    const newId = newName.toUpperCase().trim();
-                    if (newId === tripId) return;
-
-                    const loadingDiv = document.createElement('div');
-                    loadingDiv.id = 'rename-loading';
-                    loadingDiv.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(2px);z-index:9999;display:flex;align-items:center;justify-content:center;color:white;flex-direction:column;font-weight:bold;';
-                    loadingDiv.innerHTML = '<div class="loader mb-2 border-white border-t-transparent"></div><div>正在搬移資料...</div>';
-                    document.body.appendChild(loadingDiv);
-
                     try {
-                        const oldRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`${tripId}_simple_v1`);
-                        const newRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`${newId}_simple_v1`);
-                        const settingsRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('trip_settings');
-
-                        // 1. Move Expenses
-                        const snapshot = await oldRef.get();
-                        const batch = db.batch();
-                        let opCount = 0;
-                        const batches = []; 
-                        
-                        // Copy to new
-                        for (const doc of snapshot.docs) {
-                            batch.set(newRef.doc(doc.id), doc.data());
-                            batch.delete(oldRef.doc(doc.id)); // Delete old
-                            opCount++;
-                             if (opCount >= 200) { 
-                                batches.push(batch.commit());
-                                opCount = 0;
-                            }
-                        }
-                        if (opCount > 0) batches.push(batch.commit());
-                        await Promise.all(batches);
-
-                        // 2. Move Settings
-                        const oldSettings = await settingsRef.doc(tripId).get();
-                        if (oldSettings.exists) {
-                            await settingsRef.doc(newId).set(oldSettings.data());
-                            await settingsRef.doc(tripId).delete();
-                        }
-
-                        // 3. Update Local State
-                        const oldHistory = JSON.parse(localStorage.getItem('login_history') || '[]');
-                        const newHistory = [newId, ...oldHistory.filter(h => h !== tripId && h !== newId)].slice(0, 5);
-                        localStorage.setItem('login_history', JSON.stringify(newHistory));
-                        setLoginHistory(newHistory);
-                        setTripId(newId);
-                        
-                        showAlert(`專案已更名為「${newId}」`, "成功");
+                        await projectRef().update({ name: newName.trim(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+                        showAlert(`專案已更名為「${newName.trim()}」`, "成功");
                     } catch (e) {
                         console.error(e);
                         showAlert("更名失敗: " + e.message, "錯誤");
-                    } finally {
-                        if(document.body.contains(loadingDiv)) document.body.removeChild(loadingDiv);
                     }
                 }, "修改專案名稱");
             };
 
             const handleSave = async (data) => {
                 try {
-                    const ref = db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`${tripId}_simple_v1`);
+                    const ref = expensesRef();
                     if (data.id) { const { id, ...updateData } = data; await ref.doc(id).update(updateData); }
                     else { await ref.add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); }
                     setView('list'); setEditItem(null);
@@ -417,7 +383,7 @@
 
             const handleBatchSave = async (items) => {
                 try {
-                    const ref = db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`${tripId}_simple_v1`);
+                    const ref = expensesRef();
                     const promises = items.map(item => ref.add({ ...item, createdAt: firebase.firestore.FieldValue.serverTimestamp() }));
                     await Promise.all(promises);
                     showAlert(`成功儲存 ${items.length} 筆資料！`, "完成"); setView('list'); setEditItem(null);
@@ -426,27 +392,28 @@
 
             const handleDelete = (id) => {
                 showConfirm("確定要刪除這筆資料嗎？此動作無法復原。", async () => {
-                    try { await db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`${tripId}_simple_v1`).doc(id).delete(); }
+                    try { await expensesRef().doc(id).delete(); }
                     catch(e) { showAlert("刪除失敗: " + e.message); }
                 }, "刪除資料");
             };
 
             const handleDeleteProject = () => {
-                showConfirm(`警告：您即將刪除整個專案「${tripId}」\n資料將無法復原，確定嗎？`, () => {
-                    showPrompt(`請輸入專案名稱「${tripId}」以確認刪除：`, async (doubleCheck) => {
-                        if (!doubleCheck || doubleCheck.toUpperCase() !== tripId) return showAlert("輸入不正確，已取消刪除。");
+                const projectName = projects.find(p => p.id === tripId)?.name || '';
+                showConfirm(`警告：您即將刪除整個專案「${projectName}」\n資料將無法復原，確定嗎？`, () => {
+                    showPrompt(`請輸入專案名稱「${projectName}」以確認刪除：`, async (doubleCheck) => {
+                        if (!doubleCheck || doubleCheck.trim() !== projectName) return showAlert("輸入不正確，已取消刪除。");
                         try {
-                            const ref = db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`${tripId}_simple_v1`);
-                            const snapshot = await ref.limit(400).get(); 
-                            const batch = db.batch();
-                            snapshot.docs.forEach((doc) => batch.delete(doc.ref));
-                            await batch.commit();
-                            await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('trip_settings').doc(tripId).delete();
-                            
-                            const newHistory = loginHistory.filter(h => h !== tripId);
-                            localStorage.setItem('login_history', JSON.stringify(newHistory));
-                            setLoginHistory(newHistory);
-                            setView('login'); setTripId(''); setExpenses([]);
+                            let snapshot;
+                            do {
+                                snapshot = await expensesRef().limit(400).get();
+                                if (!snapshot.empty) {
+                                    const batch = db.batch();
+                                    snapshot.docs.forEach(doc => batch.delete(doc.ref));
+                                    await batch.commit();
+                                }
+                            } while (!snapshot.empty);
+                            await projectRef().delete();
+                            setView('projects'); setTripId(''); setExpenses([]);
                             showAlert("專案已刪除", "完成");
                         } catch (e) { showAlert("刪除失敗: " + e.message); }
                     }, "危險操作");
@@ -495,13 +462,17 @@
                         {/* Calculator Modal */}
                         {showCalculator && <CalculatorModal initialValue={currentCalcValue} onConfirm={handleCalcConfirm} onClose={() => setShowCalculator(false)} />}
 
-                        {view === 'login' ? (
-                            <LoginView onLogin={handleLogin} handleDeleteHistory={handleDeleteHistory} defaultKey={apiKey} history={loginHistory} />
+                        {authLoading ? (
+                            <div className="flex-grow flex items-center justify-center"><div className="loader"></div></div>
+                        ) : view === 'login' ? (
+                            <GoogleLoginView onLogin={handleGoogleLogin} />
+                        ) : view === 'projects' ? (
+                            <ProjectsView user={user} projects={projects} apiKey={apiKey} onUpdateKey={handleUpdateKey} onCreate={handleCreateProject} onOpen={handleOpenProject} onLogout={() => auth.signOut()} />
                         ) : (
                             <>
                                 {view === 'list' && (
                                     <div>
-                                        <Header tripId={tripId} expenses={filteredExpenses} filterCategory={filterCategory} onLogout={() => window.location.reload()} onAnalysis={() => setShowAnalysis(true)} onStats={() => setShowStats(true)} onDeleteProject={handleDeleteProject} toggleSearch={() => setShowSearchBar(!showSearchBar)} isSearchOpen={showSearchBar} onRenameProject={handleRenameProject} />
+                                        <Header tripId={projects.find(p => p.id === tripId)?.name || '專案'} expenses={filteredExpenses} filterCategory={filterCategory} onLogout={() => { setView('projects'); setTripId(''); }} onAnalysis={() => setShowAnalysis(true)} onStats={() => setShowStats(true)} onDeleteProject={handleDeleteProject} toggleSearch={() => setShowSearchBar(!showSearchBar)} isSearchOpen={showSearchBar} onRenameProject={handleRenameProject} />
                                         <div className="bg-paper-50/95 backdrop-blur-md border-b border-paper-200 shadow-sm px-3 py-2 flex flex-col gap-2 sticky top-0 z-20">
                                             {showSearchBar && (
                                                 <div className="relative w-full animate-slide-down mb-1">
@@ -650,6 +621,47 @@
                             <button onClick={handleConfirm} className="calc-btn ok shadow-lg shadow-clay-200/50">確認</button>
                         </div>
                     </div>
+                </div>
+            );
+        };
+
+        const GoogleLoginView = ({ onLogin }) => (
+            <div className="flex-grow flex flex-col items-center justify-center p-6 w-full">
+                <div className="bg-white/80 backdrop-blur-xl p-7 rounded-3xl shadow-xl shadow-ink-200/40 border border-white w-full max-w-sm text-center relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-ink-400 to-ink-200"></div>
+                    <div className="text-5xl mb-4 mt-3 text-clay-400"><i className="fa-solid fa-plane-departure"></i></div>
+                    <h1 className="text-2xl font-extrabold text-stone-700 tracking-wide">旅遊掃描辨識記帳</h1>
+                    <p className="text-stone-400 text-xs mt-1 mb-7">用自己的 Google 帳號安全保存旅遊支出</p>
+                    <button onClick={onLogin} className="w-full bg-white border border-stone-200 rounded-xl py-3 px-4 flex items-center justify-center gap-3 text-stone-700 font-semibold shadow-sm hover:bg-paper-50 transition-colors">
+                        <svg className="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.84 14.09A6.6 6.6 0 0 1 5.5 12c0-.73.13-1.43.34-2.09V7.07H2.18A11 11 0 0 0 1 12c0 1.77.42 3.44 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15A10.56 10.56 0 0 0 12 1 11 11 0 0 0 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                        使用 Google 帳號登入
+                    </button>
+                </div>
+            </div>
+        );
+
+        const ProjectsView = ({ user, projects, apiKey, onUpdateKey, onCreate, onOpen, onLogout }) => {
+            const [name, setName] = React.useState('');
+            const [key, setKey] = React.useState(apiKey || '');
+            const create = async () => { if (!name.trim()) return; await onCreate(name); setName(''); };
+            return (
+                <div className="flex-grow p-5 w-full">
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3 min-w-0">
+                            {user?.photoURL ? <img src={user.photoURL} className="w-10 h-10 rounded-full border-2 border-white shadow" referrerPolicy="no-referrer" /> : <div className="w-10 h-10 rounded-full bg-ink-100 flex items-center justify-center"><i className="fa-solid fa-user text-ink-500"></i></div>}
+                            <div className="min-w-0"><p className="font-bold text-stone-700 truncate">{user?.displayName || '旅行者'}</p><p className="text-[10px] text-stone-400 truncate">{user?.email}</p></div>
+                        </div>
+                        <button onClick={onLogout} className="text-xs text-stone-400 hover:text-clay-500 px-3 py-2"><i className="fa-solid fa-arrow-right-from-bracket mr-1"></i>登出</button>
+                    </div>
+                    <div className="card-soft p-4 mb-5">
+                        <label className="input-label">新增旅遊專案</label>
+                        <div className="flex gap-2"><input value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === 'Enter' && create()} className="input-field" placeholder="例如：2026 東京賞櫻" /><button onClick={create} disabled={!name.trim()} className="bg-ink-500 disabled:opacity-40 text-white rounded-xl px-4 flex-shrink-0"><i className="fa-solid fa-plus mr-1"></i>新增</button></div>
+                    </div>
+                    <div className="mb-5">
+                        <h2 className="font-bold text-stone-700 mb-2">我的專案</h2>
+                        {projects.length === 0 ? <div className="text-center py-10 text-stone-400 card-soft"><i className="fa-regular fa-folder-open text-3xl mb-3 block"></i><p className="text-sm">還沒有專案，建立第一趟旅程吧！</p></div> : <div className="space-y-2">{projects.map(project => <button key={project.id} onClick={() => onOpen(project)} className="card-soft p-4 w-full text-left flex items-center justify-between hover:border-ink-300 transition-colors"><div><p className="font-bold text-stone-700">{project.name}</p><p className="text-[10px] text-stone-400 mt-1">{project.createdAt?.seconds ? new Date(project.createdAt.seconds * 1000).toLocaleDateString('zh-TW') : '剛剛建立'}</p></div><i className="fa-solid fa-chevron-right text-stone-300"></i></button>)}</div>}
+                    </div>
+                    <details className="card-soft p-4"><summary className="text-xs font-semibold text-stone-500 cursor-pointer">AI 掃描設定（Gemini API Key）</summary><div className="flex gap-2 mt-3"><input type="password" value={key} onChange={e => setKey(e.target.value)} className="input-field text-sm" placeholder="貼上 Gemini API Key" /><button onClick={() => onUpdateKey(key)} className="bg-stone-100 text-stone-600 rounded-xl px-4 text-sm">儲存</button></div></details>
                 </div>
             );
         };
