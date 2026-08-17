@@ -3,6 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#6B8179">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="旅遊記帳">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="apple-touch-icon" sizes="180x180" href="./app-icon-180.png">
     <title>旅遊掃描辨識記帳</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -166,6 +172,9 @@
             else app = firebase.app();
             auth = firebase.auth();
             db = firebase.firestore();
+            db.enablePersistence({ synchronizeTabs: true }).catch(e => {
+                if (e.code !== 'failed-precondition' && e.code !== 'unimplemented') console.warn("Offline persistence:", e);
+            });
         } catch (e) {
             document.body.innerHTML = `<div style="padding:20px;color:red">Firebase Error: ${e.message}</div>`;
         }
@@ -208,6 +217,7 @@
             const [view, setView] = React.useState('login');
             const [tripId, setTripId] = React.useState('');
             const [projects, setProjects] = React.useState([]);
+            const [installPrompt, setInstallPrompt] = React.useState(null);
             const [apiKey, setApiKey] = React.useState((localStorage.getItem('gemini_api_key') || '').trim());
             const [expenses, setExpenses] = React.useState([]);
             const [editItem, setEditItem] = React.useState(null);
@@ -235,6 +245,12 @@
                     setView(u ? 'projects' : 'login');
                     if (!u) { setTripId(''); setProjects([]); setExpenses([]); }
                 });
+            }, []);
+
+            React.useEffect(() => {
+                const captureInstallPrompt = e => { e.preventDefault(); setInstallPrompt(e); };
+                window.addEventListener('beforeinstallprompt', captureInstallPrompt);
+                return () => window.removeEventListener('beforeinstallprompt', captureInstallPrompt);
             }, []);
 
             React.useEffect(() => {
@@ -313,6 +329,74 @@
 
             const handleOpenProject = (project) => {
                 setTripId(project.id); setCategories(project.categories || defaultCategories); setView('list');
+            };
+
+            const handleInstallApp = async () => {
+                if (installPrompt) {
+                    await installPrompt.prompt();
+                    await installPrompt.userChoice;
+                    setInstallPrompt(null);
+                } else {
+                    showAlert(/iPhone|iPad|iPod/i.test(navigator.userAgent)
+                        ? "請點 Safari 下方的分享按鈕，再選擇「加入主畫面」。"
+                        : "請開啟瀏覽器選單，選擇「安裝應用程式」或「加到主畫面」。", "安裝 App");
+                }
+            };
+
+            const handleBackup = async () => {
+                try {
+                    const backupProjects = [];
+                    for (const project of projects) {
+                        const expenseSnap = await expensesRef(project.id).orderBy('createdAt', 'asc').get();
+                        backupProjects.push({
+                            name: project.name,
+                            categories: project.categories || defaultCategories,
+                            expenses: expenseSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+                        });
+                    }
+                    const payload = { format: 'travel-expense-backup', version: 1, exportedAt: new Date().toISOString(), projects: backupProjects };
+                    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `travel-expense-backup-${new Date().toISOString().slice(0, 10)}.json`;
+                    link.click();
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    showAlert(`已備份 ${backupProjects.length} 個專案。請妥善保存下載的 JSON 檔案。`, "備份完成");
+                } catch (e) { showAlert("備份失敗：" + e.message, "錯誤"); }
+            };
+
+            const handleRestore = async (file) => {
+                if (!file) return;
+                try {
+                    const data = JSON.parse(await file.text());
+                    if (data.format !== 'travel-expense-backup' || data.version !== 1 || !Array.isArray(data.projects)) throw new Error('不支援的備份格式');
+                    let restoredCount = 0;
+                    for (const project of data.projects) {
+                        const newId = db.collection('_').doc().id;
+                        const newProjectRef = projectRef(newId);
+                        await newProjectRef.set({
+                            name: `${String(project.name || '未命名專案')}（還原）`,
+                            categories: Array.isArray(project.categories) ? project.categories : defaultCategories,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        const items = Array.isArray(project.expenses) ? project.expenses : [];
+                        for (let start = 0; start < items.length; start += 400) {
+                            const batch = db.batch();
+                            items.slice(start, start + 400).forEach(item => {
+                                const { id, ...expense } = item;
+                                if (expense.createdAt?.seconds) expense.createdAt = new firebase.firestore.Timestamp(expense.createdAt.seconds, expense.createdAt.nanoseconds || 0);
+                                else expense.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                                const docRef = id ? newProjectRef.collection('expenses').doc(id) : newProjectRef.collection('expenses').doc();
+                                batch.set(docRef, expense);
+                            });
+                            await batch.commit();
+                        }
+                        restoredCount++;
+                    }
+                    showAlert(`已還原 ${restoredCount} 個專案；原有資料沒有被覆蓋。`, "還原完成");
+                } catch (e) { showAlert("還原失敗：" + e.message, "錯誤"); }
             };
 
             const handleUpdateKey = (newKey) => {
@@ -467,7 +551,7 @@
                         ) : view === 'login' ? (
                             <GoogleLoginView onLogin={handleGoogleLogin} />
                         ) : view === 'projects' ? (
-                            <ProjectsView user={user} projects={projects} apiKey={apiKey} onUpdateKey={handleUpdateKey} onCreate={handleCreateProject} onOpen={handleOpenProject} onLogout={() => auth.signOut()} />
+                            <ProjectsView user={user} projects={projects} apiKey={apiKey} onUpdateKey={handleUpdateKey} onCreate={handleCreateProject} onOpen={handleOpenProject} onLogout={() => auth.signOut()} onInstall={handleInstallApp} onBackup={handleBackup} onRestore={handleRestore} />
                         ) : (
                             <>
                                 {view === 'list' && (
@@ -640,9 +724,10 @@
             </div>
         );
 
-        const ProjectsView = ({ user, projects, apiKey, onUpdateKey, onCreate, onOpen, onLogout }) => {
+        const ProjectsView = ({ user, projects, apiKey, onUpdateKey, onCreate, onOpen, onLogout, onInstall, onBackup, onRestore }) => {
             const [name, setName] = React.useState('');
             const [key, setKey] = React.useState(apiKey || '');
+            const restoreInput = React.useRef(null);
             const create = async () => { if (!name.trim()) return; await onCreate(name); setName(''); };
             return (
                 <div className="flex-grow p-5 w-full">
@@ -656,6 +741,12 @@
                     <div className="card-soft p-4 mb-5">
                         <label className="input-label">新增旅遊專案</label>
                         <div className="flex gap-2"><input value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === 'Enter' && create()} className="input-field" placeholder="例如：2026 東京賞櫻" /><button onClick={create} disabled={!name.trim()} className="bg-ink-500 disabled:opacity-40 text-white rounded-xl px-4 flex-shrink-0"><i className="fa-solid fa-plus mr-1"></i>新增</button></div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 mb-5">
+                        <button onClick={onInstall} className="card-soft py-3 text-xs font-semibold text-ink-600"><i className="fa-solid fa-mobile-screen-button block text-lg mb-1"></i>安裝 App</button>
+                        <button onClick={onBackup} className="card-soft py-3 text-xs font-semibold text-ink-600"><i className="fa-solid fa-cloud-arrow-down block text-lg mb-1"></i>備份</button>
+                        <button onClick={() => restoreInput.current?.click()} className="card-soft py-3 text-xs font-semibold text-ink-600"><i className="fa-solid fa-cloud-arrow-up block text-lg mb-1"></i>還原</button>
+                        <input ref={restoreInput} type="file" accept="application/json,.json" className="hidden" onChange={e => { onRestore(e.target.files?.[0]); e.target.value = ''; }} />
                     </div>
                     <div className="mb-5">
                         <h2 className="font-bold text-stone-700 mb-2">我的專案</h2>
@@ -1163,6 +1254,11 @@
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(console.error));
+        }
     </script>
 </body>
 </html>

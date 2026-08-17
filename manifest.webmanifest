@@ -1,0 +1,16 @@
+{
+  "name": "旅遊掃描辨識記帳",
+  "short_name": "旅遊記帳",
+  "description": "旅遊支出、收據辨識與專案管理",
+  "lang": "zh-TW",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#F9F8F6",
+  "theme_color": "#6B8179",
+  "icons": [
+    { "src": "./app-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
