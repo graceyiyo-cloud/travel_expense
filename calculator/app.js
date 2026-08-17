@@ -1,135 +1,22 @@
-const STORAGE_KEY = 'standalone_calculator_history_v1';
-const MAX_AGE = 30 * 24 * 60 * 60 * 1000;
-const MAX_ITEMS = 100;
-const operators = ['+', '-', '×', '÷'];
-
-let expression = '';
-let result = '0';
-let justCalculated = false;
-let lastProcess = '';
-let installPrompt = null;
-
-const expressionEl = document.querySelector('#expression');
-const resultEl = document.querySelector('#result');
-const historyEl = document.querySelector('#history');
-const toastEl = document.querySelector('#toast');
-
-function cleanHistory() {
-  const now = Date.now();
-  try {
-    const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    const fresh = Array.isArray(value) ? value.filter(item => item && now - Number(item.createdAt) < MAX_AGE) : [];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh.slice(0, MAX_ITEMS)));
-    return fresh.slice(0, MAX_ITEMS);
-  } catch {
-    localStorage.removeItem(STORAGE_KEY);
-    return [];
-  }
-}
-
-function evaluate(formula) {
-  let safe = formula.replaceAll('×', '*').replaceAll('÷', '/');
-  while (/[+\-*/.]$/.test(safe)) safe = safe.slice(0, -1);
-  if (!safe || !/^-?[0-9+\-*/.\s]+$/.test(safe)) return null;
-  try {
-    const value = Function(`"use strict"; return (${safe})`)();
-    if (!Number.isFinite(value)) return null;
-    return String(Math.round((value + Number.EPSILON) * 1e10) / 1e10);
-  } catch { return null; }
-}
-
-function updateScreen() {
-  expressionEl.textContent = lastProcess || expression || '準備開始計算';
-  resultEl.textContent = justCalculated ? result : (expression || '0');
-}
-
-function save(formula, answer) {
-  const history = cleanHistory().filter(item => !(item.formula === formula && item.answer === answer));
-  history.unshift({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, formula, answer, createdAt: Date.now() });
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(history.slice(0, MAX_ITEMS)));
-  renderHistory();
-}
-
-function calculate() {
-  const answer = evaluate(expression);
-  if (answer === null) return showToast('算式不完整');
-  const formula = expression;
-  result = answer;
-  lastProcess = `${formula} =`;
-  justCalculated = true;
-  save(formula, answer);
-  updateScreen();
-}
-
-function input(value) {
-  if (operators.includes(value)) {
-    if (!expression && value !== '-') return;
-    if (justCalculated) expression = result;
-    if (operators.includes(expression.slice(-1))) expression = expression.slice(0, -1);
-    expression += value;
-    justCalculated = false;
-    lastProcess = '';
-  } else {
-    if (justCalculated) expression = '';
-    const segment = expression.split(/[+\-×÷]/).pop();
-    if (value === '.' && segment.includes('.')) return;
-    expression += value;
-    justCalculated = false;
-    lastProcess = '';
-  }
-  updateScreen();
-}
-
-function renderHistory() {
-  const history = cleanHistory();
-  historyEl.replaceChildren();
-  if (!history.length) {
-    const empty = document.createElement('div');
-    empty.className = 'empty'; empty.textContent = '完成一次計算後，紀錄會出現在這裡';
-    historyEl.append(empty); return;
-  }
-  history.forEach(item => {
-    const row = document.createElement('article'); row.className = 'item';
-    const formula = document.createElement('div'); formula.className = 'formula'; formula.textContent = item.formula;
-    const answer = document.createElement('div'); answer.className = 'answer'; answer.textContent = `= ${item.answer}`;
-    const copy = document.createElement('button'); copy.textContent = '複製全部'; copy.addEventListener('click', () => copyText(`${item.formula} = ${item.answer}`, '過程與結果已複製'));
-    row.append(formula, answer, copy); historyEl.append(row);
-  });
-}
-
-async function copyText(text, message) {
-  try {
-    if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(text);
-    else {
-      const area = document.createElement('textarea'); area.value = text; area.style.position = 'fixed'; area.style.opacity = '0';
-      document.body.append(area); area.select(); document.execCommand('copy'); area.remove();
-    }
-    showToast(message);
-  } catch { showToast('無法複製，請再試一次'); }
-}
-
-let toastTimer;
-function showToast(message) {
-  toastEl.textContent = message; toastEl.classList.add('show'); clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1600);
-}
-
-document.querySelector('.keys').addEventListener('click', event => {
-  const button = event.target.closest('button'); if (!button) return;
-  const { value, action } = button.dataset;
-  if (value) input(value);
-  if (action === 'equals') calculate();
-  if (action === 'clear') { expression = ''; result = '0'; lastProcess = ''; justCalculated = false; updateScreen(); }
-  if (action === 'back') { if (justCalculated) { expression = ''; justCalculated = false; lastProcess = ''; } else expression = expression.slice(0, -1); updateScreen(); }
-  if (action === 'percent') { const valueNow = evaluate(expression); if (valueNow !== null) { expression = String(Number(valueNow) / 100); justCalculated = false; lastProcess = ''; updateScreen(); } }
-});
-
-document.querySelector('#copy-process').addEventListener('click', () => copyText(lastProcess ? lastProcess.slice(0, -2) : (expression || '0'), '計算過程已複製'));
-document.querySelector('#copy-result').addEventListener('click', () => copyText(justCalculated ? result : (evaluate(expression) || expression || '0'), '計算結果已複製'));
-
-window.addEventListener('beforeinstallprompt', event => { event.preventDefault(); installPrompt = event; document.querySelector('#install').hidden = false; });
-document.querySelector('#install').addEventListener('click', async () => { if (!installPrompt) return; installPrompt.prompt(); await installPrompt.userChoice; installPrompt = null; document.querySelector('#install').hidden = true; });
-window.addEventListener('appinstalled', () => showToast('App 已安裝'));
-
-if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js'));
-cleanHistory(); renderHistory(); updateScreen();
+const STORAGE_KEY='standalone_calculator_history_v1',MAX_AGE=30*24*60*60*1000,MAX_ITEMS=100,operators=['+','-','×','÷'];
+let expression='',result='0',justCalculated=false,lastFormula='',installPrompt=null;
+const $=s=>document.querySelector(s),expressionEl=$('#expression'),resultEl=$('#result'),historyEl=$('#history'),toastEl=$('#toast');
+const isStandalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+const normalized=f=>f.replaceAll('×','x').replaceAll(' ','');
+function cleanHistory(){const now=Date.now();try{const v=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');const fresh=Array.isArray(v)?v.filter(i=>i&&now-Number(i.createdAt)<MAX_AGE).slice(0,MAX_ITEMS):[];localStorage.setItem(STORAGE_KEY,JSON.stringify(fresh));return fresh}catch{localStorage.removeItem(STORAGE_KEY);return[]}}
+function evaluate(f){let safe=f.replaceAll('×','*').replaceAll('÷','/');while(/[+\-*/.]$/.test(safe))safe=safe.slice(0,-1);if(!safe||!/^-?[0-9+\-*/.\s]+$/.test(safe))return null;try{const v=Function(`"use strict";return(${safe})`)();return Number.isFinite(v)?String(Math.round((v+Number.EPSILON)*1e10)/1e10):null}catch{return null}}
+function fullEquation(){if(justCalculated&&lastFormula)return`${normalized(lastFormula)}=${result}`;const a=evaluate(expression);return a===null?'':`${normalized(expression)}=${a}`}
+function updateScreen(){expressionEl.textContent=justCalculated&&lastFormula?`${lastFormula} =`:(expression||'準備開始計算');resultEl.textContent=justCalculated?result:(expression||'0')}
+function save(f,a){const h=cleanHistory().filter(i=>!(i.formula===f&&i.answer===a));h.unshift({id:`${Date.now()}-${Math.random().toString(36).slice(2,7)}`,formula:f,answer:a,createdAt:Date.now()});localStorage.setItem(STORAGE_KEY,JSON.stringify(h.slice(0,MAX_ITEMS)));renderHistory()}
+function calculate(){const a=evaluate(expression);if(a===null)return showToast('算式不完整');lastFormula=expression;result=a;justCalculated=true;save(lastFormula,a);updateScreen()}
+function input(v){if(operators.includes(v)){if(!expression&&v!=='-')return;if(justCalculated)expression=result;if(operators.includes(expression.slice(-1)))expression=expression.slice(0,-1);expression+=v}else{if(justCalculated)expression='';const segment=expression.split(/[+\-×÷]/).pop();if(v==='.'&&segment.includes('.'))return;expression+=v}justCalculated=false;lastFormula='';updateScreen()}
+function icon(k){return k==='copy'?'<svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3"/></svg>':'<svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"/></svg>'}
+function renderHistory(){const h=cleanHistory();historyEl.replaceChildren();if(!h.length){const e=document.createElement('div');e.className='empty';e.textContent='完成一次計算後，完整算式會出現在這裡';historyEl.append(e);return}h.forEach(i=>{const eq=`${normalized(i.formula)}=${i.answer}`,row=document.createElement('article'),text=document.createElement('div'),date=document.createElement('div'),actions=document.createElement('div'),copy=document.createElement('button'),share=document.createElement('button');row.className='item';text.className='equation';text.textContent=eq;date.className='date';date.textContent=new Date(i.createdAt).toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});actions.className='item-actions';copy.innerHTML=icon('copy');copy.ariaLabel='複製完整算式';copy.onclick=()=>copyText(eq);share.innerHTML=icon('share');share.ariaLabel='分享完整算式';share.onclick=()=>shareText(eq);actions.append(copy,share);row.append(text,date,actions);historyEl.append(row)})}
+async function copyText(text=fullEquation()){if(!text)return showToast('請先完成一個算式');try{if(navigator.clipboard&&isSecureContext)await navigator.clipboard.writeText(text);else{const a=document.createElement('textarea');a.value=text;a.style.cssText='position:fixed;opacity:0';document.body.append(a);a.select();document.execCommand('copy');a.remove()}showToast(`已複製 ${text}`)}catch{showToast('無法複製，請再試一次')}}
+async function shareText(text=fullEquation()){if(!text)return showToast('請先完成一個算式');if(navigator.share){try{await navigator.share({title:'算算',text});return}catch(e){if(e.name==='AbortError')return}}await copyText(text);showToast('此瀏覽器不支援分享，已改為複製')}
+let toastTimer;function showToast(m){toastEl.textContent=m;toastEl.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toastEl.classList.remove('show'),1800)}
+function showInstallHelp(){const ios=/iphone|ipad|ipod/i.test(navigator.userAgent),steps=ios?['使用 Safari 開啟這個網頁','點下方工具列的「分享」按鈕','往下找到並點「加入主畫面」','點右上角「加入」']:['使用 Chrome 開啟這個網頁','點右上角 ⋮ 選單','點「安裝應用程式」或「加到主畫面」'];$('#install-intro').textContent=ios?'iPhone／iPad 需要透過 Safari 加入主畫面。':'如果沒有出現自動安裝視窗，請從瀏覽器選單安裝。';$('#install-steps').replaceChildren(...steps.map(s=>{const li=document.createElement('li');li.textContent=s;return li}));$('#install-dialog').hidden=false}
+$('.keys').onclick=e=>{const b=e.target.closest('button');if(!b)return;const{value,action}=b.dataset;if(value)input(value);if(action==='equals')calculate();if(action==='clear'){expression='';result='0';lastFormula='';justCalculated=false;updateScreen()}if(action==='back'){if(justCalculated){expression='';lastFormula='';justCalculated=false}else expression=expression.slice(0,-1);updateScreen()}if(action==='percent'){const v=evaluate(expression);if(v!==null){expression=String(Number(v)/100);justCalculated=false;lastFormula='';updateScreen()}}};
+$('#copy-full').onclick=()=>copyText();$('#share-full').onclick=()=>shareText();$('#dialog-close').onclick=()=>$('#install-dialog').hidden=true;$('#install-dialog').onclick=e=>{if(e.target.id==='install-dialog')e.currentTarget.hidden=true};
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e});$('#install').onclick=async()=>{if(isStandalone())return showToast('你已經安裝完成');if(!installPrompt)return showInstallHelp();installPrompt.prompt();await installPrompt.userChoice;installPrompt=null};addEventListener('appinstalled',()=>{$('#install').hidden=true;showToast('App 已安裝')});if(isStandalone())$('#install').hidden=true;
+if('serviceWorker'in navigator)addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js'));cleanHistory();renderHistory();updateScreen();
