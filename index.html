@@ -150,6 +150,7 @@
         @media (max-width: 639px) {
             .add-form-shell { background: transparent; border: 0; box-shadow: none; border-radius: 0; padding: 0 0 1.5rem; margin: 0; }
         }
+        .mobile-container.add-view-container { padding-bottom: 0; }
     </style>
 </head>
 <body>
@@ -702,7 +703,7 @@
 
             return (
                 <>
-                    <div className="mobile-container">
+                    <div className={`mobile-container ${view === 'add' ? 'add-view-container' : ''}`}>
                         {dialog.show && (
                             <div className="fixed inset-0 bg-stone-800/40 z-[3000] flex items-center justify-center p-4 fade-in backdrop-blur-sm">
                                 <div className="bg-paper-50 rounded-2xl shadow-lg w-full max-w-xs p-5 text-center border-2 border-paper-200">
@@ -752,7 +753,7 @@
                                     </div>
                                 )}
 
-                                <div className="p-3 pt-3 pb-24">
+                                <div className={`p-3 pt-3 ${view === 'add' ? 'pb-0' : 'pb-24'}`}>
                                     {view === 'list' && <ExpenseList expenses={filteredExpenses} onEdit={(item) => { setEditItem(item); setView('add'); }} onDelete={handleDelete} />}
                                     {view === 'add' && <AddForm apiKeys={apiKeys} onUpdateKeys={handleUpdateKeys} categories={categories} onAddCategory={handleAddCategory} initialData={editItem} onSave={handleSave} onBatchSave={handleBatchSave} onCancel={() => { setView('list'); setEditItem(null); }} showAlert={showAlert} onOpenCalculator={openCalculator} />}
                                 </div>
