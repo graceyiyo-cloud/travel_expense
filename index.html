@@ -223,6 +223,30 @@
             throw lastError || new Error('所有 Gemini API Key 均無法使用');
         };
 
+        const testGeminiKey = async key => {
+            const cleanKey = String(key || '').trim();
+            if (!cleanKey) return { status: 'empty', message: '請先輸入 Key' };
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 20000);
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${encodeURIComponent(cleanKey)}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: 'Reply with OK only.' }] }], generationConfig: { maxOutputTokens: 8 } }),
+                    signal: controller.signal
+                });
+                const data = await response.json().catch(() => ({}));
+                if (response.ok && data.candidates?.length) return { status: 'valid', message: 'Key 可正常使用' };
+                if (response.status === 429) return { status: 'quota', message: 'Key 有效，但目前額度或頻率受限' };
+                if ([400, 401, 403].includes(response.status)) return { status: 'invalid', message: data.error?.message || 'Key 無效或沒有使用權限' };
+                return { status: 'error', message: data.error?.message || `測試失敗（${response.status}）` };
+            } catch (error) {
+                return error.name === 'AbortError'
+                    ? { status: 'timeout', message: '測試逾時，請稍後再試' }
+                    : { status: 'error', message: '網路連線失敗' };
+            } finally { clearTimeout(timeout); }
+        };
+
         const bytesToBase64 = bytes => {
             let binary = '';
             bytes.forEach(byte => binary += String.fromCharCode(byte));
@@ -843,11 +867,17 @@
             const [name, setName] = React.useState('');
             const [keys, setKeys] = React.useState(apiKeys || ['', '', '']);
             const [keysSaved, setKeysSaved] = React.useState(false);
+            const [keyTests, setKeyTests] = React.useState([null, null, null]);
             const [syncPassword, setSyncPassword] = React.useState('');
             const [syncStatus, setSyncStatus] = React.useState('');
             const [syncing, setSyncing] = React.useState(false);
             const restoreInput = React.useRef(null);
             const create = async () => { if (!name.trim()) return; await onCreate(name); setName(''); };
+            const runKeyTest = async index => {
+                setKeyTests(prev => { const next = [...prev]; next[index] = { status: 'testing', message: '測試中…' }; return next; });
+                const result = await testGeminiKey(keys[index]);
+                setKeyTests(prev => { const next = [...prev]; next[index] = result; return next; });
+            };
             const saveKeysToCloud = async () => {
                 setSyncing(true); setSyncStatus('');
                 try { await onCloudSaveKeys(syncPassword, keys); setSyncStatus('已加密同步到雲端'); }
@@ -886,7 +916,7 @@
                     <details className="card-soft p-4">
                         <summary className="text-xs font-semibold text-stone-500 cursor-pointer">AI 掃描設定（最多 3 組 Gemini API Key）</summary>
                         <div className="space-y-2 mt-3">
-                            {[0, 1, 2].map(index => <div key={index} className="flex items-center gap-2"><span className="text-[10px] font-bold text-stone-400 w-5">{index + 1}</span><input type="password" value={keys[index] || ''} onChange={e => { const next = [...keys]; next[index] = e.target.value; setKeys(next); setKeysSaved(false); }} className="input-field text-sm" placeholder={`Gemini API Key ${index + 1}${index === 0 ? '（必填）' : '（選填）'}`} /></div>)}
+                            {[0, 1, 2].map(index => <div key={index}><div className="flex items-center gap-2"><span className="text-[10px] font-bold text-stone-400 w-5">{index + 1}</span><input type="password" value={keys[index] || ''} onChange={e => { const next = [...keys]; next[index] = e.target.value; setKeys(next); setKeysSaved(false); setKeyTests(prev => { const tests = [...prev]; tests[index] = null; return tests; }); }} className="input-field text-sm" placeholder={`Gemini API Key ${index + 1}${index === 0 ? '（必填）' : '（選填）'}`} /><button type="button" disabled={keyTests[index]?.status === 'testing'} onClick={() => runKeyTest(index)} className="h-[42px] px-3 rounded-xl border border-stone-200 bg-white text-xs font-semibold text-ink-600 disabled:opacity-50 flex-shrink-0">測試</button></div>{keyTests[index] && <p className={`text-[10px] ml-7 mt-1 ${keyTests[index].status === 'valid' ? 'text-green-600' : keyTests[index].status === 'testing' ? 'text-stone-400' : keyTests[index].status === 'quota' ? 'text-amber-600' : 'text-red-500'}`}>{keyTests[index].message}</p>}</div>)}
                             <p className="text-[10px] text-stone-400 leading-relaxed">呼叫失敗時會自動嘗試下一組，成功後記住可用的 Key。</p>
                             <button onClick={() => { if (onUpdateKeys(keys)) { setKeysSaved(true); setTimeout(() => setKeysSaved(false), 2500); } }} className="btn-secondary py-2 text-sm">{keysSaved ? <><i className="fa-solid fa-check text-green-500 mr-1"></i>已儲存在此裝置</> : '儲存在此裝置'}</button>
                             <div className="border-t border-paper-200 pt-3 mt-3">
