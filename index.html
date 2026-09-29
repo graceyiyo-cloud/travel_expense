@@ -662,6 +662,36 @@
                 });
             };
 
+            const handleCompletePurchaseGroup = async (groupItems, purchase) => {
+                const amount = Number(purchase.amount);
+                const rate = Number(purchase.exchangeRate);
+                const validItems = (groupItems || []).filter(item => item?.id);
+                if (!amount || amount <= 0) throw new Error('請輸入整批購買金額');
+                if (!rate || rate <= 0) throw new Error('請確認匯率');
+                if (!validItems.length) throw new Error('找不到要更新的代買品項');
+                const totalQuantity = validItems.reduce((sum, item) => sum + Math.max(1, Number(item.quantity) || 1), 0);
+                const totalCents = Math.round(amount * 100);
+                let allocatedCents = 0;
+                const batch = db.batch();
+                validItems.forEach((item, index) => {
+                    const quantity = Math.max(1, Number(item.quantity) || 1);
+                    const itemCents = index === validItems.length - 1 ? totalCents - allocatedCents : Math.round(totalCents * quantity / totalQuantity);
+                    allocatedCents += itemCents;
+                    const itemAmount = itemCents / 100;
+                    batch.update(purchaseItemsRef().doc(item.id), {
+                        purchased: true,
+                        purchaseAmount: itemAmount,
+                        purchaseCurrency: purchase.currency,
+                        exchangeRate: rate,
+                        twdAmount: Math.round(itemAmount * rate),
+                        rateUpdatedAt: purchase.rateUpdatedAt || new Date().toISOString(),
+                        purchasedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                });
+                await batch.commit();
+            };
+
             const handleReopenPurchaseItem = async item => {
                 await handleUpdatePurchaseItem(item.id, { purchased: false });
             };
@@ -990,7 +1020,7 @@
                         ) : view === 'projects' ? (
                             <ProjectsView user={user} projects={projects} projectTotals={projectTotals} purchaseCount={purchaseItems.filter(item => !item.purchased).length} pendingExpenseCount={pendingExpenseBatches.length} apiKeys={apiKeys} onUpdateKeys={handleUpdateKeys} onCloudSaveKeys={handleCloudSaveKeys} onCloudLoadKeys={handleCloudLoadKeys} onCreate={handleCreateProject} onOpen={handleOpenProject} onOpenPurchases={handleOpenPurchases} onOpenPendingExpenses={handleOpenPendingExpenses} onLogout={() => auth.signOut()} onInstall={handleInstallApp} onBackup={handleBackup} onRestore={handleRestore} />
                         ) : view === 'purchases' ? (
-                            <PurchaseListView user={user} items={purchaseItems} apiKeys={apiKeys} onBack={handleBackToProjects} onAdd={handleAddPurchaseItem} onBatchAdd={handleBatchAddPurchaseItems} onUpdate={handleUpdatePurchaseItem} onComplete={handleCompletePurchaseItem} onReopen={handleReopenPurchaseItem} onDelete={handleDeletePurchaseItem} showAlert={showAlert} />
+                            <PurchaseListView user={user} items={purchaseItems} apiKeys={apiKeys} onBack={handleBackToProjects} onAdd={handleAddPurchaseItem} onBatchAdd={handleBatchAddPurchaseItems} onUpdate={handleUpdatePurchaseItem} onComplete={handleCompletePurchaseItem} onCompleteGroup={handleCompletePurchaseGroup} onReopen={handleReopenPurchaseItem} onDelete={handleDeletePurchaseItem} showAlert={showAlert} />
                         ) : view === 'pending-expenses' ? (
                             <PendingExpensesView batches={pendingExpenseBatches} projects={projects} apiKeys={apiKeys} onBack={handleBackToProjects} onCreate={handleCreatePendingExpenseBatch} onUpdate={handleUpdatePendingExpenseBatch} onImport={handleImportPendingExpenseBatch} showAlert={showAlert} />
                         ) : (
@@ -1264,7 +1294,7 @@
             return result;
         };
 
-        const PurchaseListView = ({ user, items, apiKeys, onBack, onAdd, onBatchAdd, onUpdate, onComplete, onReopen, onDelete, showAlert }) => {
+        const PurchaseListView = ({ user, items, apiKeys, onBack, onAdd, onBatchAdd, onUpdate, onComplete, onCompleteGroup, onReopen, onDelete, showAlert }) => {
             const [form, setForm] = React.useState({ name: '', quantity: 1, requester: '', note: '', imageData: '' });
             const [saving, setSaving] = React.useState(false);
             const [scanning, setScanning] = React.useState(false);
@@ -1286,12 +1316,13 @@
                     const name = String(item.name || '').trim();
                     const note = String(item.note || '').trim();
                     const key = `${name.toLocaleLowerCase()}|${note.toLocaleLowerCase()}`;
-                    if (!groups.has(key)) groups.set(key, { key, name, note, imageData: item.imageData || '', totalQuantity: 0, requesters: new Map() });
+                    if (!groups.has(key)) groups.set(key, { key, name, note, imageData: item.imageData || '', totalQuantity: 0, requesters: new Map(), items: [] });
                     const group = groups.get(key);
                     const quantity = Math.max(1, Number(item.quantity) || 1);
                     const requester = String(item.requester || '').trim() || '未指定';
                     group.totalQuantity += quantity;
                     group.requesters.set(requester, (group.requesters.get(requester) || 0) + quantity);
+                    group.items.push(item);
                     if (!group.imageData && item.imageData) group.imageData = item.imageData;
                 });
                 return Array.from(groups.values()).map(group => ({ ...group, requesters: Array.from(group.requesters.entries()).map(([name, quantity]) => ({ name, quantity })) }));
@@ -1376,7 +1407,14 @@
 
             const openPurchaseDialog = item => {
                 const preferredCurrency = item.purchaseCurrency || 'JPY';
-                setPurchaseDialog({ item, amount: item.purchaseAmount || '', currency: preferredCurrency, exchangeRate: '', rateUpdatedAt: '', loadingRate: true, rateError: '' });
+                setPurchaseDialog({ item, items: [item], isGroup: false, name: item.name, totalQuantity: Math.max(1, Number(item.quantity) || 1), amount: item.purchaseAmount || '', currency: preferredCurrency, exchangeRate: '', rateUpdatedAt: '', loadingRate: true, rateError: '' });
+                pushLayer('purchase');
+                loadPurchaseRate(preferredCurrency);
+            };
+
+            const openPurchaseGroupDialog = group => {
+                const preferredCurrency = group.items?.[0]?.purchaseCurrency || 'JPY';
+                setPurchaseDialog({ item: null, items: group.items || [], isGroup: true, name: group.name, totalQuantity: group.totalQuantity, amount: '', currency: preferredCurrency, exchangeRate: '', rateUpdatedAt: '', loadingRate: true, rateError: '' });
                 pushLayer('purchase');
                 loadPurchaseRate(preferredCurrency);
             };
@@ -1385,7 +1423,8 @@
                 event.preventDefault();
                 setSaving(true);
                 try {
-                    await onComplete(purchaseDialog.item, purchaseDialog);
+                    if (purchaseDialog.isGroup) await onCompleteGroup(purchaseDialog.items, purchaseDialog);
+                    else await onComplete(purchaseDialog.item, purchaseDialog);
                     closeLayer();
                 } catch (e) { showAlert('儲存購買金額失敗：' + e.message, '錯誤'); }
                 finally { setSaving(false); }
@@ -1458,8 +1497,8 @@
 
                     {purchaseDialog && <div className="fixed inset-0 bg-stone-800/40 z-[3000] flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm" onClick={closeLayer}>
                         <form onSubmit={savePurchase} className="bg-paper-50 rounded-t-3xl sm:rounded-2xl shadow-xl w-full max-w-sm p-5 border border-paper-200" onClick={event => event.stopPropagation()}>
-                            <div className="flex items-center justify-between mb-4"><div><h2 className="font-bold text-stone-700">填寫購買金額</h2><p className="text-[10px] text-stone-400 mt-0.5 truncate max-w-[240px]">{purchaseDialog.item.name}</p></div><button type="button" onClick={closeLayer} aria-label="關閉購買金額視窗" className="w-8 h-8 rounded-full border border-stone-200 bg-white text-stone-400 flex items-center justify-center"><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
-                            <label className="input-label">購買金額</label><input autoFocus type="number" min="0" step="0.01" inputMode="decimal" value={purchaseDialog.amount} onChange={event => setPurchaseDialog({ ...purchaseDialog, amount: event.target.value })} className="input-field text-lg font-bold" aria-label="購買金額" placeholder="0"/>
+                            <div className="flex items-center justify-between mb-4"><div><h2 className="font-bold text-stone-700">{purchaseDialog.isGroup ? '填寫整批購買金額' : '填寫購買金額'}</h2><p className="text-[10px] text-stone-400 mt-0.5 truncate max-w-[240px]">{purchaseDialog.name}</p>{purchaseDialog.isGroup && <p className="text-[10px] text-ink-500 mt-1">共 {purchaseDialog.totalQuantity} 個，將依各委託人的數量比例分攤</p>}</div><button type="button" onClick={closeLayer} aria-label="關閉購買金額視窗" className="w-8 h-8 rounded-full border border-stone-200 bg-white text-stone-400 flex items-center justify-center"><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+                            <label className="input-label">{purchaseDialog.isGroup ? '整批購買總金額' : '購買金額'}</label><input autoFocus type="number" min="0" step="0.01" inputMode="decimal" value={purchaseDialog.amount} onChange={event => setPurchaseDialog({ ...purchaseDialog, amount: event.target.value })} className="input-field text-lg font-bold" aria-label={purchaseDialog.isGroup ? '整批購買總金額' : '購買金額'} placeholder="0"/>
                             <div className="grid grid-cols-2 gap-2 mt-3"><label><span className="input-label">幣別</span><select value={purchaseDialog.currency} onChange={event => loadPurchaseRate(event.target.value)} className="input-field text-sm" aria-label="購買幣別">{currencies.map(currency => <option key={currency} value={currency}>{currency}</option>)}</select></label><label><span className="input-label">匯率（1 {purchaseDialog.currency}）</span><input type="number" min="0" step="0.000001" inputMode="decimal" value={purchaseDialog.exchangeRate} onChange={event => setPurchaseDialog({ ...purchaseDialog, exchangeRate: event.target.value, rateError: '' })} className="input-field text-sm" aria-label="換算台幣匯率" placeholder={purchaseDialog.loadingRate ? '取得中…' : '請輸入匯率'} disabled={purchaseDialog.loadingRate}/></label></div>
                             {purchaseDialog.rateError ? <p className="text-[10px] text-clay-500 mt-2">{purchaseDialog.rateError}</p> : purchaseDialog.loadingRate ? <p className="text-[10px] text-stone-400 mt-2">正在取得當日匯率…</p> : <p className="text-[10px] text-stone-400 mt-2">匯率更新時間：{purchaseDialog.currency === 'TWD' ? '固定 1：1' : new Date(purchaseDialog.rateUpdatedAt).toLocaleString('zh-TW')}</p>}
                             {Number(purchaseDialog.amount) > 0 && Number(purchaseDialog.exchangeRate) > 0 && <div className="bg-ink-50 border border-ink-100 rounded-xl px-3 py-2.5 mt-3 flex items-center justify-between"><span className="text-xs text-stone-500">換算台幣</span><strong className="text-ink-700">NT$ {Math.round(Number(purchaseDialog.amount) * Number(purchaseDialog.exchangeRate)).toLocaleString('zh-TW')}</strong></div>}
@@ -1492,9 +1531,10 @@
                             <div className="flex items-center justify-between mb-2 px-1"><div><h2 className="font-bold text-stone-700">整合採買</h2><p className="text-[10px] text-stone-400 mt-0.5">相同商品已合併，已購買品項不列入</p></div><span className="text-[10px] text-stone-400">{combinedItems.length} 種 · {pendingUnitCount} 個</span></div>
                             {combinedItems.length === 0 ? <div className="card-soft text-center py-12 text-stone-400"><p className="text-sm">目前沒有待購買品項</p></div> : <div className="space-y-2">{combinedItems.map(group => <article key={group.key} className="card-soft p-3 flex items-start gap-3">
                                 {group.imageData ? <button type="button" onClick={() => openImagePreview(group.imageData)} className="w-16 h-16 rounded-xl overflow-hidden border border-paper-200 bg-white flex-shrink-0" aria-label={`預覽 ${group.name} 的圖片`}><img src={group.imageData} alt={`${group.name} 縮圖`} className="w-full h-full object-cover" loading="lazy"/></button> : <div className="w-16 h-16 rounded-xl border border-dashed border-stone-200 bg-paper-50 flex items-center justify-center text-stone-300 flex-shrink-0"><svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 15-4-4L5 19"/></svg></div>}
-                                <div className="flex-1 min-w-0"><div className="flex items-start justify-between gap-2"><h3 className="font-bold text-sm text-stone-700 break-words">{group.name}</h3><span className="text-sm font-extrabold text-white bg-ink-500 rounded-lg px-2.5 py-1 flex-shrink-0">共 {group.totalQuantity} 個</span></div>{group.note && <p className="text-[10px] text-stone-400 mt-1">{group.note}</p>}<div className="flex flex-wrap gap-1.5 mt-2">{group.requesters.map(requester => <span key={requester.name} className="text-[11px] font-semibold text-ink-700 bg-ink-50 border border-ink-100 rounded-lg px-2 py-1">{requester.name} {requester.quantity} 個</span>)}</div></div>
+                                <div className="flex-1 min-w-0"><h3 className="font-bold text-sm text-stone-700 break-words">{group.name}</h3>{group.note && <p className="text-[10px] text-stone-400 mt-1">{group.note}</p>}<div className="flex flex-wrap gap-1.5 mt-2">{group.requesters.map(requester => <span key={requester.name} className="text-[11px] font-semibold text-ink-700 bg-ink-50 border border-ink-100 rounded-lg px-2 py-1">{requester.name} {requester.quantity} 個</span>)}</div></div>
+                                <div className="flex flex-col items-end gap-2 flex-shrink-0"><span className="text-sm font-extrabold text-white bg-ink-500 rounded-lg px-2.5 py-1">共 {group.totalQuantity} 個</span><button type="button" onClick={() => openPurchaseGroupDialog(group)} aria-label={`將 ${group.name} 整批標記為已購買`} className="w-9 h-9 rounded-lg border border-ink-300 bg-white text-transparent flex items-center justify-center"><svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button></div>
                             </article>)}</div>}
-                            <p className="text-[10px] text-stone-400 text-center mt-3">若要修改、刪除或填寫購買金額，請切換到「分開清單」。</p>
+                            <p className="text-[10px] text-stone-400 text-center mt-3">整批勾選會依數量分攤金額；若要個別修改或刪除，請切換到「分開清單」。</p>
                         </section> : <>
                             <form onSubmit={submitManual} className="card-soft p-4">
                                 <h2 className="font-bold text-stone-700 mb-3">手動新增</h2>
@@ -1507,10 +1547,9 @@
                             <section aria-label="分開代買品項">
                                 <div className="flex items-center justify-between mb-2 px-1"><h2 className="font-bold text-stone-700">分開清單</h2><span className="text-[10px] text-stone-400">共 {items.length} 筆</span></div>
                                 {items.length === 0 ? <div className="card-soft text-center py-12 text-stone-400"><svg className="w-9 h-9 mx-auto mb-3 text-ink-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 7h12l-1 13H7L6 7Z"/><path d="M9 9V5a3 3 0 0 1 6 0v4"/></svg><p className="text-sm">還沒有代買品項</p></div> : <div className="space-y-2">{items.map(item => <article key={item.id} className={`card-soft p-3 flex items-start gap-3 transition-opacity ${item.purchased ? 'opacity-70' : ''}`}>
-                                    <button type="button" onClick={() => item.purchased ? onReopen(item).catch(e => showAlert('更新失敗：' + e.message, '錯誤')) : openPurchaseDialog(item)} aria-label={item.purchased ? `將 ${item.name} 標記為待買` : `填寫 ${item.name} 的購買金額`} className={`w-7 h-7 mt-0.5 rounded-lg border flex items-center justify-center flex-shrink-0 ${item.purchased ? 'bg-ink-500 border-ink-500 text-white' : 'bg-white border-ink-300 text-transparent'}`}><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button>
                                     {item.imageData && <button type="button" onClick={() => openImagePreview(item.imageData)} className="w-14 h-14 rounded-xl overflow-hidden border border-paper-200 bg-white flex-shrink-0" aria-label={`預覽 ${item.name} 的圖片`}><img src={item.imageData} alt={`${item.name} 縮圖`} className="w-full h-full object-cover" loading="lazy"/></button>}
                                     <div className="flex-1 min-w-0"><div className="flex items-start justify-between gap-2"><p className={`font-bold text-sm text-stone-700 break-words ${item.purchased ? 'line-through' : ''}`}>{item.name}</p><span className="text-xs font-bold text-ink-600 bg-ink-50 rounded-lg px-2 py-1 flex-shrink-0">× {item.quantity || 1}</span></div>{(item.requester || item.note) && <p className="text-[11px] text-stone-400 mt-1 break-words">{item.requester && `委託人：${item.requester}`}{item.requester && item.note && ' · '}{item.note}</p>}{item.purchased && item.purchaseAmount && <div className="mt-2 text-[11px] font-semibold text-ink-600 bg-ink-50/70 rounded-lg px-2 py-1.5">已購買：{item.purchaseCurrency} {Number(item.purchaseAmount).toLocaleString('zh-TW')} · 約 NT$ {Number(item.twdAmount || 0).toLocaleString('zh-TW')}<span className="block text-[9px] font-normal text-stone-400 mt-0.5">匯率 1 {item.purchaseCurrency} = {Number(item.exchangeRate).toFixed(4)} TWD</span></div>}</div>
-                                    <div className="flex flex-col gap-1 flex-shrink-0"><button type="button" onClick={() => openEditor(item)} aria-label={`修改 ${item.name}`} className="w-8 h-8 rounded-lg text-stone-400 hover:text-ink-600 hover:bg-ink-50 flex items-center justify-center"><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg></button><button type="button" onClick={() => onDelete(item)} aria-label={`刪除 ${item.name}`} className="w-8 h-8 rounded-lg text-stone-300 hover:text-clay-500 hover:bg-clay-50 flex items-center justify-center"><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="m7 7 1 13h8l1-13"/></svg></button></div>
+                                    <div className="flex flex-col items-center gap-1 flex-shrink-0"><button type="button" onClick={() => item.purchased ? onReopen(item).catch(e => showAlert('更新失敗：' + e.message, '錯誤')) : openPurchaseDialog(item)} aria-label={item.purchased ? `將 ${item.name} 標記為待買` : `填寫 ${item.name} 的購買金額`} className={`w-8 h-8 rounded-lg border flex items-center justify-center ${item.purchased ? 'bg-ink-500 border-ink-500 text-white' : 'bg-white border-ink-300 text-transparent'}`}><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button><button type="button" onClick={() => openEditor(item)} aria-label={`修改 ${item.name}`} className="w-8 h-8 rounded-lg text-stone-400 hover:text-ink-600 hover:bg-ink-50 flex items-center justify-center"><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg></button><button type="button" onClick={() => onDelete(item)} aria-label={`刪除 ${item.name}`} className="w-8 h-8 rounded-lg text-stone-300 hover:text-clay-500 hover:bg-clay-50 flex items-center justify-center"><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="m7 7 1 13h8l1-13"/></svg></button></div>
                                 </article>)}</div>}
                             </section>
                         </>}
