@@ -1302,6 +1302,7 @@
             const [scanning, setScanning] = React.useState(false);
             const [scanItems, setScanItems] = React.useState([]);
             const [editItem, setEditItem] = React.useState(null);
+            const [editorMode, setEditorMode] = React.useState('edit');
             const [editForm, setEditForm] = React.useState({ name: '', quantity: 1, requester: '', purchaseLocation: '', note: '', imageData: '' });
             const [purchaseDialog, setPurchaseDialog] = React.useState(null);
             const [previewImage, setPreviewImage] = React.useState('');
@@ -1343,11 +1344,35 @@
                 });
                 return Array.from(locationGroups.entries()).map(([location, groups]) => ({ location, groups }));
             }, [combinedItems]);
+            const purchasedByRequester = React.useMemo(() => {
+                const requesterGroups = new Map();
+                items.filter(item => item.purchased).forEach(item => {
+                    const requester = String(item.requester || '').trim() || '未指定委託人';
+                    if (!requesterGroups.has(requester)) requesterGroups.set(requester, { requester, items: [], totalQuantity: 0, twdTotal: 0, currencies: new Map() });
+                    const group = requesterGroups.get(requester);
+                    const quantity = Math.max(1, Number(item.quantity) || 1);
+                    const currency = String(item.purchaseCurrency || 'TWD');
+                    const amount = Number(item.purchaseAmount) || 0;
+                    group.items.push(item);
+                    group.totalQuantity += quantity;
+                    group.twdTotal += Number(item.twdAmount) || 0;
+                    group.currencies.set(currency, (group.currencies.get(currency) || 0) + amount);
+                });
+                return Array.from(requesterGroups.values()).map(group => ({ ...group, currencies: Array.from(group.currencies.entries()).map(([currency, amount]) => ({ currency, amount })) })).sort((a, b) => a.requester.localeCompare(b.requester, 'zh-Hant'));
+            }, [items]);
+            const purchasedSummary = React.useMemo(() => {
+                const purchased = items.filter(item => item.purchased);
+                return {
+                    records: purchased.length,
+                    quantity: purchased.reduce((sum, item) => sum + Math.max(1, Number(item.quantity) || 1), 0),
+                    twdTotal: purchased.reduce((sum, item) => sum + (Number(item.twdAmount) || 0), 0)
+                };
+            }, [items]);
 
             React.useEffect(() => {
                 const closeTopLayer = event => {
                     const layer = event.state?.purchaseLayer || '';
-                    if (layer !== 'edit') setEditItem(null);
+                    if (layer !== 'edit') { setEditItem(null); setEditorMode('edit'); }
                     if (layer !== 'purchase') setPurchaseDialog(null);
                     if (layer !== 'image') setPreviewImage('');
                     if (!layer) setListMode(event.state?.purchaseMode || 'combined');
@@ -1363,14 +1388,23 @@
 
             const closeLayer = () => {
                 setEditItem(null);
+                setEditorMode('edit');
                 setPurchaseDialog(null);
                 setPreviewImage('');
                 if (window.history.state?.purchaseLayer) window.history.back();
             };
 
             const openEditor = item => {
+                setEditorMode('edit');
                 setEditItem(item);
                 setEditForm({ name: item.name || '', quantity: item.quantity || 1, requester: item.requester || '', purchaseLocation: item.purchaseLocation || '', note: item.note || '', imageData: item.imageData || '' });
+                pushLayer('edit');
+            };
+
+            const openCopy = item => {
+                setEditorMode('copy');
+                setEditItem(item);
+                setEditForm({ name: item.name || '', quantity: 1, requester: '', purchaseLocation: item.purchaseLocation || '', note: item.note || '', imageData: item.imageData || '' });
                 pushLayer('edit');
             };
 
@@ -1379,9 +1413,11 @@
                 if (!editForm.name.trim()) return showAlert('請輸入代買品項', '提示');
                 setSaving(true);
                 try {
-                    await onUpdate(editItem.id, { name: editForm.name.trim(), quantity: Math.max(1, Number(editForm.quantity) || 1), requester: editForm.requester.trim(), purchaseLocation: editForm.purchaseLocation.trim(), note: editForm.note.trim(), imageData: editForm.imageData || '' });
+                    const changes = { name: editForm.name.trim(), quantity: Math.max(1, Number(editForm.quantity) || 1), requester: editForm.requester.trim(), purchaseLocation: editForm.purchaseLocation.trim(), note: editForm.note.trim(), imageData: editForm.imageData || '' };
+                    if (editorMode === 'copy') await onAdd(changes);
+                    else await onUpdate(editItem.id, changes);
                     closeLayer();
-                } catch (e) { showAlert('修改失敗：' + e.message, '錯誤'); }
+                } catch (e) { showAlert((editorMode === 'copy' ? '複製失敗：' : '修改失敗：') + e.message, '錯誤'); }
                 finally { setSaving(false); }
             };
 
@@ -1505,10 +1541,10 @@
 
                     {editItem && <div className="fixed inset-0 bg-stone-800/40 z-[3000] flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm" onClick={closeLayer}>
                         <form onSubmit={saveEdit} className="bg-paper-50 rounded-t-3xl sm:rounded-2xl shadow-xl w-full max-w-sm p-5 border border-paper-200" onClick={event => event.stopPropagation()}>
-                            <div className="flex items-center justify-between mb-4"><div><h2 className="font-bold text-stone-700">修改代買品項</h2><p className="text-[10px] text-stone-400 mt-0.5">商品、數量、委託人、購買地點與備註都可以修改</p></div><button type="button" onClick={closeLayer} aria-label="關閉修改視窗" className="w-8 h-8 rounded-full border border-stone-200 bg-white text-stone-400 flex items-center justify-center"><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+                            <div className="flex items-center justify-between mb-4"><div><h2 className="font-bold text-stone-700">{editorMode === 'copy' ? '複製代買品項' : '修改代買品項'}</h2><p className="text-[10px] text-stone-400 mt-0.5">{editorMode === 'copy' ? '已保留商品資料，請填寫新的委託人' : '商品、數量、委託人、購買地點與備註都可以修改'}</p></div><button type="button" onClick={closeLayer} aria-label={editorMode === 'copy' ? '關閉複製視窗' : '關閉修改視窗'} className="w-8 h-8 rounded-full border border-stone-200 bg-white text-stone-400 flex items-center justify-center"><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
                             <div className="space-y-2"><input autoFocus value={editForm.name} onChange={event => setEditForm({ ...editForm, name: event.target.value })} className="input-field text-sm" aria-label="修改品項" placeholder="代買品項"/><input type="number" min="1" inputMode="numeric" value={editForm.quantity} onChange={event => setEditForm({ ...editForm, quantity: event.target.value })} className="input-field text-sm" aria-label="修改數量" placeholder="數量"/><input value={editForm.requester} onChange={event => setEditForm({ ...editForm, requester: event.target.value })} className="input-field text-sm" aria-label="修改委託人" placeholder="委託人（選填）"/><input value={editForm.purchaseLocation} onChange={event => setEditForm({ ...editForm, purchaseLocation: event.target.value })} className="input-field text-sm" aria-label="修改購買地點" placeholder="購買地點，例如：松本清"/><input value={editForm.note} onChange={event => setEditForm({ ...editForm, note: event.target.value })} className="input-field text-sm" aria-label="修改備註" placeholder="規格／備註（選填）"/></div>
                             <div className="mt-3 flex items-center gap-3">{editForm.imageData ? <button type="button" onClick={() => openImagePreview(editForm.imageData)} className="w-16 h-16 rounded-xl overflow-hidden border border-paper-200 bg-white flex-shrink-0" aria-label="預覽目前商品圖片"><img src={editForm.imageData} alt="目前商品縮圖" className="w-full h-full object-cover"/></button> : <div className="w-16 h-16 rounded-xl border border-dashed border-stone-300 bg-white flex items-center justify-center text-stone-300 flex-shrink-0"><svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 15-4-4L5 19"/></svg></div>}<div className="flex-1"><button type="button" onClick={() => editPhotoInput.current?.click()} className="btn-secondary py-2 text-xs">{editForm.imageData ? '更換圖片' : '加入圖片'}</button>{editForm.imageData && <button type="button" onClick={() => setEditForm({ ...editForm, imageData: '' })} className="text-[10px] text-clay-500 mt-1.5 w-full">移除圖片</button>}<input ref={editPhotoInput} type="file" accept="image/*" className="hidden" onChange={event => { attachPreview(event.target.files?.[0], 'edit'); event.target.value = ''; }}/></div></div>
-                            <div className="grid grid-cols-2 gap-2 mt-4"><button type="button" onClick={closeLayer} className="btn-secondary py-2.5 text-sm">取消</button><button type="submit" disabled={saving || !editForm.name.trim()} className="btn-primary py-2.5 text-sm disabled:opacity-50">儲存修改</button></div>
+                            <div className="grid grid-cols-2 gap-2 mt-4"><button type="button" onClick={closeLayer} className="btn-secondary py-2.5 text-sm">取消</button><button type="submit" disabled={saving || !editForm.name.trim()} className="btn-primary py-2.5 text-sm disabled:opacity-50">{editorMode === 'copy' ? '加入複製品項' : '儲存修改'}</button></div>
                         </form>
                     </div>}
 
@@ -1542,17 +1578,17 @@
                             <button type="button" onClick={saveScanItems} disabled={saving || !scanItems.some(item => item.name.trim())} className="btn-primary py-2.5 text-sm mt-3 disabled:opacity-50">加入 {scanItems.filter(item => item.name.trim()).length} 筆品項</button>
                         </section>}
 
-                        <div className="grid grid-cols-2 gap-1 bg-paper-100 border border-paper-200 rounded-xl p-1" role="group" aria-label="代買清單顯示方式"><button type="button" onClick={() => changeListMode('combined')} aria-pressed={listMode === 'combined'} className={`rounded-lg py-2 text-xs font-bold transition-colors ${listMode === 'combined' ? 'bg-white text-ink-700 shadow-sm' : 'text-stone-400'}`}>整合採買</button><button type="button" onClick={() => changeListMode('separate')} aria-pressed={listMode === 'separate'} className={`rounded-lg py-2 text-xs font-bold transition-colors ${listMode === 'separate' ? 'bg-white text-ink-700 shadow-sm' : 'text-stone-400'}`}>分開清單</button></div>
+                        <div className="grid grid-cols-3 gap-1 bg-paper-100 border border-paper-200 rounded-xl p-1" role="group" aria-label="代買清單顯示方式"><button type="button" onClick={() => changeListMode('combined')} aria-pressed={listMode === 'combined'} className={`rounded-lg py-2 text-xs font-bold transition-colors ${listMode === 'combined' ? 'bg-white text-ink-700 shadow-sm' : 'text-stone-400'}`}>整合採買</button><button type="button" onClick={() => changeListMode('separate')} aria-pressed={listMode === 'separate'} className={`rounded-lg py-2 text-xs font-bold transition-colors ${listMode === 'separate' ? 'bg-white text-ink-700 shadow-sm' : 'text-stone-400'}`}>分開清單</button><button type="button" onClick={() => changeListMode('purchased')} aria-pressed={listMode === 'purchased'} className={`rounded-lg py-2 text-xs font-bold transition-colors ${listMode === 'purchased' ? 'bg-white text-ink-700 shadow-sm' : 'text-stone-400'}`}>已購統計</button></div>
 
                         {listMode === 'combined' ? <section aria-label="整合採買清單">
                             <div className="flex items-center justify-between mb-2 px-1"><div><h2 className="font-bold text-stone-700">整合採買</h2><p className="text-[10px] text-stone-400 mt-0.5">相同商品已合併，已購買品項不列入</p></div><span className="text-[10px] text-stone-400">{combinedItems.length} 種 · {pendingUnitCount} 個</span></div>
                             {combinedItems.length === 0 ? <div className="text-center py-12 text-stone-400"><p className="text-sm">目前沒有待購買品項</p></div> : <div className="space-y-4">{combinedByLocation.map(locationGroup => <div key={locationGroup.location}><div className="flex items-center gap-2 px-1 pb-1.5 border-b border-ink-100"><svg className="w-4 h-4 text-ink-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg><h3 className="text-sm font-extrabold text-ink-700">{locationGroup.location}</h3><span className="text-[10px] text-stone-400">{locationGroup.groups.length} 種</span></div><div>{locationGroup.groups.map(group => <article key={group.key} className="px-1 py-3 flex items-start gap-2.5 border-b border-paper-200 last:border-b-0">
                                 {group.imageData ? <button type="button" onClick={() => openImagePreview(group.imageData)} className="w-16 h-16 rounded-xl overflow-hidden border border-paper-200 bg-white flex-shrink-0" aria-label={`預覽 ${group.name} 的圖片`}><img src={group.imageData} alt={`${group.name} 縮圖`} className="w-full h-full object-cover" loading="lazy"/></button> : <div className="w-16 h-16 rounded-xl border border-dashed border-stone-200 bg-paper-50 flex items-center justify-center text-stone-300 flex-shrink-0"><svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 15-4-4L5 19"/></svg></div>}
                                 <div className="flex-1 min-w-0"><h3 className="font-bold text-sm text-stone-700 break-words">{group.name}</h3>{group.note && <p className="text-[10px] text-stone-400 mt-1">{group.note}</p>}<div className="flex flex-wrap gap-1.5 mt-2">{group.requesters.map(requester => <span key={requester.name} className="text-[11px] font-semibold text-ink-700 bg-ink-50 border border-ink-100 rounded-lg px-2 py-1">{requester.name} {requester.quantity} 個</span>)}</div></div>
-                                <div className="flex flex-col items-end gap-2 flex-shrink-0"><span className="text-xs font-extrabold text-white bg-ink-500 rounded-lg px-2 py-1">共 {group.totalQuantity} 個</span><button type="button" onClick={() => openPurchaseGroupDialog(group)} aria-label={`將 ${group.name} 整批標記為已購買`} className="w-6 h-6 rounded-md border border-ink-300 bg-white text-transparent flex items-center justify-center"><svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button></div>
+                                <div className="flex flex-col items-end gap-1.5 flex-shrink-0"><span className="text-xs font-extrabold text-white bg-ink-500 rounded-lg px-2 py-1">共 {group.totalQuantity} 個</span><button type="button" onClick={() => openPurchaseGroupDialog(group)} aria-label={`將 ${group.name} 整批標記為已購買`} className="w-6 h-6 rounded-md border border-ink-300 bg-white text-transparent flex items-center justify-center"><svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button><button type="button" onClick={() => openCopy(group.items[0])} aria-label={`複製 ${group.name}`} className="w-6 h-6 rounded-md text-stone-400 hover:text-ink-600 hover:bg-ink-50 flex items-center justify-center"><svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg></button></div>
                             </article>)}</div></div>)}</div>}
                             <p className="text-[10px] text-stone-400 text-center mt-3">整批勾選會依數量分攤金額；若要個別修改或刪除，請切換到「分開清單」。</p>
-                        </section> : <>
+                        </section> : listMode === 'separate' ? <>
                             <form onSubmit={submitManual} className="card-soft p-4">
                                 <h2 className="font-bold text-stone-700 mb-3">手動新增</h2>
                                 <div className="flex gap-2"><input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="input-field text-sm flex-1" placeholder="代買品項" aria-label="代買品項"/><input type="number" min="1" inputMode="numeric" value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })} className="input-field text-sm w-20" placeholder="數量" aria-label="數量"/></div>
@@ -1566,10 +1602,25 @@
                                 {items.length === 0 ? <div className="text-center py-12 text-stone-400"><svg className="w-9 h-9 mx-auto mb-3 text-ink-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 7h12l-1 13H7L6 7Z"/><path d="M9 9V5a3 3 0 0 1 6 0v4"/></svg><p className="text-sm">還沒有代買品項</p></div> : <div>{items.map(item => <article key={item.id} className={`px-1 py-3 flex items-start gap-2.5 border-b border-paper-200 last:border-b-0 transition-opacity ${item.purchased ? 'opacity-70' : ''}`}>
                                     {item.imageData && <button type="button" onClick={() => openImagePreview(item.imageData)} className="w-14 h-14 rounded-xl overflow-hidden border border-paper-200 bg-white flex-shrink-0" aria-label={`預覽 ${item.name} 的圖片`}><img src={item.imageData} alt={`${item.name} 縮圖`} className="w-full h-full object-cover" loading="lazy"/></button>}
                                     <div className="flex-1 min-w-0"><div className="flex items-start justify-between gap-2"><p className={`font-bold text-sm text-stone-700 break-words ${item.purchased ? 'line-through' : ''}`}>{item.name}</p><span className="text-xs font-bold text-ink-600 bg-ink-50 rounded-lg px-2 py-1 flex-shrink-0">× {item.quantity || 1}</span></div>{item.purchaseLocation && <p className="text-[11px] font-semibold text-ink-600 mt-1 break-words">購買地點：{item.purchaseLocation}</p>}{(item.requester || item.note) && <p className="text-[11px] text-stone-400 mt-0.5 break-words">{item.requester && `委託人：${item.requester}`}{item.requester && item.note && ' · '}{item.note}</p>}{item.purchased && item.purchaseAmount && <div className="mt-2 text-[11px] font-semibold text-ink-600 bg-ink-50/70 rounded-lg px-2 py-1.5">已購買：{item.purchaseCurrency} {Number(item.purchaseAmount).toLocaleString('zh-TW')} · 約 NT$ {Number(item.twdAmount || 0).toLocaleString('zh-TW')}<span className="block text-[9px] font-normal text-stone-400 mt-0.5">匯率 1 {item.purchaseCurrency} = {Number(item.exchangeRate).toFixed(4)} TWD</span></div>}</div>
-                                    <div className="flex flex-col items-center gap-1 flex-shrink-0"><button type="button" onClick={() => item.purchased ? onReopen(item).catch(e => showAlert('更新失敗：' + e.message, '錯誤')) : openPurchaseDialog(item)} aria-label={item.purchased ? `將 ${item.name} 標記為待買` : `填寫 ${item.name} 的購買金額`} className={`w-6 h-6 rounded-md border flex items-center justify-center ${item.purchased ? 'bg-ink-500 border-ink-500 text-white' : 'bg-white border-ink-300 text-transparent'}`}><svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button><button type="button" onClick={() => openEditor(item)} aria-label={`修改 ${item.name}`} className="w-7 h-7 rounded-md text-stone-400 hover:text-ink-600 hover:bg-ink-50 flex items-center justify-center"><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg></button><button type="button" onClick={() => onDelete(item)} aria-label={`刪除 ${item.name}`} className="w-7 h-7 rounded-md text-stone-300 hover:text-clay-500 hover:bg-clay-50 flex items-center justify-center"><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="m7 7 1 13h8l1-13"/></svg></button></div>
+                                    <div className="flex flex-col items-center gap-1 flex-shrink-0"><button type="button" onClick={() => item.purchased ? onReopen(item).catch(e => showAlert('更新失敗：' + e.message, '錯誤')) : openPurchaseDialog(item)} aria-label={item.purchased ? `將 ${item.name} 標記為待買` : `填寫 ${item.name} 的購買金額`} className={`w-6 h-6 rounded-md border flex items-center justify-center ${item.purchased ? 'bg-ink-500 border-ink-500 text-white' : 'bg-white border-ink-300 text-transparent'}`}><svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button><button type="button" onClick={() => openCopy(item)} aria-label={`複製 ${item.name}`} className="w-7 h-7 rounded-md text-stone-400 hover:text-ink-600 hover:bg-ink-50 flex items-center justify-center"><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg></button><button type="button" onClick={() => openEditor(item)} aria-label={`修改 ${item.name}`} className="w-7 h-7 rounded-md text-stone-400 hover:text-ink-600 hover:bg-ink-50 flex items-center justify-center"><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg></button><button type="button" onClick={() => onDelete(item)} aria-label={`刪除 ${item.name}`} className="w-7 h-7 rounded-md text-stone-300 hover:text-clay-500 hover:bg-clay-50 flex items-center justify-center"><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="m7 7 1 13h8l1-13"/></svg></button></div>
                                 </article>)}</div>}
                             </section>
-                        </>}
+                        </> : <section aria-label="已購買委託統計">
+                            <div className="flex items-center justify-between mb-3 px-1"><div><h2 className="font-bold text-stone-700">已購統計</h2><p className="text-[10px] text-stone-400 mt-0.5">依委託人整理已經買到的品項與金額</p></div><span className="text-[10px] text-stone-400">{purchasedByRequester.length} 位委託人</span></div>
+                            <div className="grid grid-cols-3 gap-2 mb-5">
+                                <div className="bg-ink-50 rounded-xl px-2 py-3 text-center"><p className="text-[10px] text-stone-400">已購明細</p><p className="font-extrabold text-ink-700 mt-1">{purchasedSummary.records} 筆</p></div>
+                                <div className="bg-ink-50 rounded-xl px-2 py-3 text-center"><p className="text-[10px] text-stone-400">商品數量</p><p className="font-extrabold text-ink-700 mt-1">{purchasedSummary.quantity} 個</p></div>
+                                <div className="bg-ink-50 rounded-xl px-2 py-3 text-center"><p className="text-[10px] text-stone-400">台幣合計</p><p className="font-extrabold text-ink-700 mt-1">NT$ {Math.round(purchasedSummary.twdTotal).toLocaleString('zh-TW')}</p></div>
+                            </div>
+                            {purchasedByRequester.length === 0 ? <div className="text-center py-12 text-stone-400"><svg className="w-9 h-9 mx-auto mb-3 text-ink-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/><circle cx="12" cy="12" r="9"/></svg><p className="text-sm">目前還沒有已購買品項</p></div> : <div className="space-y-5">{purchasedByRequester.map(group => <div key={group.requester}>
+                                <div className="flex items-start justify-between gap-3 px-1 pb-2 border-b border-ink-100"><div><h3 className="font-extrabold text-ink-700">{group.requester}</h3><p className="text-[10px] text-stone-400 mt-0.5">{group.items.length} 筆 · {group.totalQuantity} 個</p></div><div className="text-right"><p className="text-sm font-extrabold text-ink-700">NT$ {Math.round(group.twdTotal).toLocaleString('zh-TW')}</p><p className="text-[10px] text-stone-400 mt-0.5">{group.currencies.map(total => `${total.currency} ${Number(total.amount).toLocaleString('zh-TW')}`).join(' · ')}</p></div></div>
+                                <div>{group.items.map(item => <article key={item.id} className="px-1 py-3 flex items-start gap-2.5 border-b border-paper-200 last:border-b-0">
+                                    {item.imageData ? <button type="button" onClick={() => openImagePreview(item.imageData)} className="w-12 h-12 rounded-lg overflow-hidden border border-paper-200 bg-white flex-shrink-0" aria-label={`預覽 ${item.name} 的圖片`}><img src={item.imageData} alt={`${item.name} 縮圖`} className="w-full h-full object-cover" loading="lazy"/></button> : <div className="w-12 h-12 rounded-lg border border-dashed border-stone-200 bg-paper-50 flex items-center justify-center text-stone-300 flex-shrink-0"><svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 15-4-4L5 19"/></svg></div>}
+                                    <div className="flex-1 min-w-0"><div className="flex items-start justify-between gap-2"><h4 className="font-bold text-sm text-stone-700 break-words">{item.name}</h4><span className="text-xs font-bold text-ink-600 flex-shrink-0">× {item.quantity || 1}</span></div>{(item.purchaseLocation || item.note) && <p className="text-[10px] text-stone-400 mt-1 break-words">{item.purchaseLocation && `購買地點：${item.purchaseLocation}`}{item.purchaseLocation && item.note && ' · '}{item.note}</p>}<div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1.5"><span className="text-xs font-bold text-ink-700">{item.purchaseCurrency || 'TWD'} {Number(item.purchaseAmount || 0).toLocaleString('zh-TW')}</span><span className="text-[10px] text-stone-400">約 NT$ {Math.round(Number(item.twdAmount) || 0).toLocaleString('zh-TW')}</span>{item.purchasedAt?.seconds && <span className="text-[10px] text-stone-300">{new Date(item.purchasedAt.seconds * 1000).toLocaleDateString('zh-TW')}</span>}</div></div>
+                                    <button type="button" onClick={() => openCopy(item)} aria-label={`複製 ${item.name}`} className="w-7 h-7 rounded-md text-stone-400 hover:text-ink-600 hover:bg-ink-50 flex items-center justify-center flex-shrink-0"><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg></button>
+                                </article>)}</div>
+                            </div>)}</div>}
+                        </section>}
                     </main>
                 </div>
             );
