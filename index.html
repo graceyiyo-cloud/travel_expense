@@ -204,6 +204,7 @@
         const defaultCategories = ["飲食", "交通", "住宿", "購物", "門票", "其他"];
         const currencies = ["TWD", "JPY", "KRW", "USD", "EUR", "CNY", "THB", "VND"];
         const GEMINI_MODEL = 'gemini-3.5-flash-lite';
+        const PURCHASE_SCAN_ACCOUNT = 'graceyiyo@gmail.com';
 
         const loadGeminiKeys = () => {
             try {
@@ -365,6 +366,7 @@
             const [tripId, setTripId] = React.useState('');
             const [projects, setProjects] = React.useState([]);
             const [projectTotals, setProjectTotals] = React.useState({});
+            const [purchaseItems, setPurchaseItems] = React.useState([]);
             const [installPrompt, setInstallPrompt] = React.useState(null);
             const [apiKeys, setApiKeys] = React.useState(loadGeminiKeys);
             const [expenses, setExpenses] = React.useState([]);
@@ -391,9 +393,40 @@
                     setUser(u);
                     setAuthLoading(false);
                     setView(u ? 'projects' : 'login');
-                    if (!u) { setTripId(''); setProjects([]); setExpenses([]); }
+                    const baseUrl = window.location.pathname + window.location.search;
+                    window.history.replaceState({ appView: u ? 'projects' : 'login' }, '', baseUrl);
+                    if (!u) { setTripId(''); setProjects([]); setExpenses([]); setPurchaseItems([]); }
                 });
             }, []);
+
+            React.useEffect(() => {
+                const handlePopState = event => {
+                    if (!user) return;
+                    const state = event.state || {};
+                    if (state.appView === 'purchases') {
+                        setView('purchases');
+                        setTripId('');
+                        return;
+                    }
+                    if (state.appView === 'list' && state.tripId) {
+                        setTripId(state.tripId);
+                        setEditItem(null);
+                        setView('list');
+                        return;
+                    }
+                    if (state.appView === 'add' && state.tripId) {
+                        setTripId(state.tripId);
+                        setEditItem(null);
+                        setView('add');
+                        return;
+                    }
+                    setTripId('');
+                    setEditItem(null);
+                    setView('projects');
+                };
+                window.addEventListener('popstate', handlePopState);
+                return () => window.removeEventListener('popstate', handlePopState);
+            }, [user]);
 
             React.useEffect(() => {
                 const captureInstallPrompt = e => { e.preventDefault(); setInstallPrompt(e); };
@@ -427,8 +460,17 @@
                 return () => unsubs.forEach(unsub => unsub());
             }, [user, projects]);
 
+            React.useEffect(() => {
+                if (!user) return;
+                return db.collection('users').doc(user.uid).collection('purchaseItems')
+                    .orderBy('createdAt', 'desc').onSnapshot(snap => {
+                        setPurchaseItems(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+                    }, e => showAlert("讀取代買清單失敗：" + e.message, "錯誤"));
+            }, [user]);
+
             const projectRef = (id = tripId) => db.collection('users').doc(user.uid).collection('projects').doc(id);
             const expensesRef = (id = tripId) => projectRef(id).collection('expenses');
+            const purchaseItemsRef = () => db.collection('users').doc(user.uid).collection('purchaseItems');
 
             React.useEffect(() => {
                 if (!user || !tripId) return;
@@ -490,11 +532,72 @@
                 try {
                     await projectRef(id).set({ name: cleanName, categories: defaultCategories, createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
                     setTripId(id); setCategories(defaultCategories); setView('list');
+                    window.history.pushState({ appView: 'list', tripId: id }, '', `#project-${id}`);
                 } catch (e) { showAlert("新增專案失敗：" + e.message, "錯誤"); }
             };
 
             const handleOpenProject = (project) => {
                 setTripId(project.id); setCategories(project.categories || defaultCategories); setView('list');
+                window.history.pushState({ appView: 'list', tripId: project.id }, '', `#project-${project.id}`);
+            };
+
+            const handleOpenPurchases = () => {
+                setTripId('');
+                setView('purchases');
+                if (window.history.state?.appView !== 'purchases') {
+                    window.history.pushState({ appView: 'purchases' }, '', '#purchases');
+                }
+            };
+
+            const handleBackToProjects = () => {
+                if (window.history.state?.appView && window.history.state.appView !== 'projects') window.history.back();
+                else {
+                    setTripId('');
+                    setEditItem(null);
+                    setView('projects');
+                    window.history.replaceState({ appView: 'projects' }, '', window.location.pathname + window.location.search);
+                }
+            };
+
+            const handleAddPurchaseItem = async item => {
+                const name = String(item?.name || '').trim();
+                if (!name) throw new Error('請輸入代買品項');
+                await purchaseItemsRef().add({
+                    name,
+                    quantity: Math.max(1, Number(item.quantity) || 1),
+                    requester: String(item.requester || '').trim(),
+                    note: String(item.note || '').trim(),
+                    purchased: false,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            };
+
+            const handleBatchAddPurchaseItems = async items => {
+                const cleaned = (items || []).map(item => ({
+                    name: String(item?.name || '').trim(),
+                    quantity: Math.max(1, Number(item?.quantity) || 1),
+                    requester: String(item?.requester || '').trim(),
+                    note: String(item?.note || '').trim()
+                })).filter(item => item.name);
+                if (!cleaned.length) throw new Error('沒有可儲存的代買品項');
+                const batch = db.batch();
+                cleaned.forEach(item => {
+                    const docRef = purchaseItemsRef().doc();
+                    batch.set(docRef, { ...item, purchased: false, createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+                });
+                await batch.commit();
+            };
+
+            const handleTogglePurchaseItem = async item => {
+                await purchaseItemsRef().doc(item.id).update({ purchased: !item.purchased, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+            };
+
+            const handleDeletePurchaseItem = item => {
+                showConfirm(`確定要刪除「${item.name}」嗎？`, async () => {
+                    try { await purchaseItemsRef().doc(item.id).delete(); }
+                    catch (e) { showAlert('刪除失敗：' + e.message, '錯誤'); }
+                }, '刪除代買品項');
             };
 
             const handleInstallApp = async () => {
@@ -520,7 +623,9 @@
                             expenses: expenseSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
                         });
                     }
-                    const payload = { format: 'travel-expense-backup', version: 1, exportedAt: new Date().toISOString(), projects: backupProjects };
+                    const purchaseSnap = await purchaseItemsRef().orderBy('createdAt', 'asc').get();
+                    const backupPurchaseItems = purchaseSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    const payload = { format: 'travel-expense-backup', version: 2, exportedAt: new Date().toISOString(), projects: backupProjects, purchaseItems: backupPurchaseItems };
                     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
                     const link = document.createElement('a');
@@ -536,7 +641,7 @@
                 if (!file) return;
                 try {
                     const data = JSON.parse(await file.text());
-                    if (data.format !== 'travel-expense-backup' || data.version !== 1 || !Array.isArray(data.projects)) throw new Error('不支援的備份格式');
+                    if (data.format !== 'travel-expense-backup' || ![1, 2].includes(data.version) || !Array.isArray(data.projects)) throw new Error('不支援的備份格式');
                     let restoredCount = 0;
                     for (const project of data.projects) {
                         const newId = db.collection('_').doc().id;
@@ -561,7 +666,19 @@
                         }
                         restoredCount++;
                     }
-                    showAlert(`已還原 ${restoredCount} 個專案；原有資料沒有被覆蓋。`, "還原完成");
+                    const purchaseItems = Array.isArray(data.purchaseItems) ? data.purchaseItems : [];
+                    for (let start = 0; start < purchaseItems.length; start += 400) {
+                        const batch = db.batch();
+                        purchaseItems.slice(start, start + 400).forEach(item => {
+                            const { id, ...purchaseItem } = item;
+                            if (purchaseItem.createdAt?.seconds) purchaseItem.createdAt = new firebase.firestore.Timestamp(purchaseItem.createdAt.seconds, purchaseItem.createdAt.nanoseconds || 0);
+                            else purchaseItem.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                            const docRef = purchaseItemsRef().doc();
+                            batch.set(docRef, purchaseItem);
+                        });
+                        await batch.commit();
+                    }
+                    showAlert(`已還原 ${restoredCount} 個專案與 ${purchaseItems.length} 筆代買品項；原有資料沒有被覆蓋。`, "還原完成");
                 } catch (e) { showAlert("還原失敗：" + e.message, "錯誤"); }
             };
 
@@ -653,6 +770,7 @@
                     if (data.id) { const { id, ...updateData } = data; await ref.doc(id).update(updateData); }
                     else { await ref.add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); }
                     setView('list'); setEditItem(null);
+                    if (window.history.state?.appView === 'add') window.history.back();
                 } catch (e) { showAlert("儲存失敗: " + e.message, "錯誤"); }
             };
 
@@ -662,6 +780,7 @@
                     const promises = items.map(item => ref.add({ ...item, createdAt: firebase.firestore.FieldValue.serverTimestamp() }));
                     await Promise.all(promises);
                     showAlert(`成功儲存 ${items.length} 筆資料！`, "完成"); setView('list'); setEditItem(null);
+                    if (window.history.state?.appView === 'add') window.history.back();
                 } catch (e) { showAlert("批次儲存失敗: " + e.message, "錯誤"); }
             };
 
@@ -742,12 +861,14 @@
                         ) : view === 'login' ? (
                             <GoogleLoginView onLogin={handleGoogleLogin} />
                         ) : view === 'projects' ? (
-                            <ProjectsView user={user} projects={projects} projectTotals={projectTotals} apiKeys={apiKeys} onUpdateKeys={handleUpdateKeys} onCloudSaveKeys={handleCloudSaveKeys} onCloudLoadKeys={handleCloudLoadKeys} onCreate={handleCreateProject} onOpen={handleOpenProject} onLogout={() => auth.signOut()} onInstall={handleInstallApp} onBackup={handleBackup} onRestore={handleRestore} />
+                            <ProjectsView user={user} projects={projects} projectTotals={projectTotals} purchaseCount={purchaseItems.filter(item => !item.purchased).length} apiKeys={apiKeys} onUpdateKeys={handleUpdateKeys} onCloudSaveKeys={handleCloudSaveKeys} onCloudLoadKeys={handleCloudLoadKeys} onCreate={handleCreateProject} onOpen={handleOpenProject} onOpenPurchases={handleOpenPurchases} onLogout={() => auth.signOut()} onInstall={handleInstallApp} onBackup={handleBackup} onRestore={handleRestore} />
+                        ) : view === 'purchases' ? (
+                            <PurchaseListView user={user} items={purchaseItems} apiKeys={apiKeys} onBack={handleBackToProjects} onAdd={handleAddPurchaseItem} onBatchAdd={handleBatchAddPurchaseItems} onToggle={handleTogglePurchaseItem} onDelete={handleDeletePurchaseItem} showAlert={showAlert} />
                         ) : (
                             <>
                                 {view === 'list' && (
                                     <div>
-                                        <Header tripId={projects.find(p => p.id === tripId)?.name || '專案'} expenses={filteredExpenses} filterCategory={filterCategory} onBack={() => { setView('projects'); setTripId(''); }} onAnalysis={() => setShowAnalysis(true)} onStats={() => setShowStats(true)} onDeleteProject={handleDeleteProject} toggleSearch={() => setShowSearchBar(!showSearchBar)} isSearchOpen={showSearchBar} onRenameProject={handleRenameProject} />
+                                        <Header tripId={projects.find(p => p.id === tripId)?.name || '專案'} expenses={filteredExpenses} filterCategory={filterCategory} onBack={handleBackToProjects} onAnalysis={() => setShowAnalysis(true)} onStats={() => setShowStats(true)} onDeleteProject={handleDeleteProject} toggleSearch={() => setShowSearchBar(!showSearchBar)} isSearchOpen={showSearchBar} onRenameProject={handleRenameProject} />
                                         <div className="bg-paper-50/95 backdrop-blur-md border-b border-paper-200 shadow-sm px-3 py-2 flex flex-col gap-2 sticky top-0 z-20">
                                             {showSearchBar && (
                                                 <div className="relative w-full animate-slide-down mb-1">
@@ -770,8 +891,8 @@
                                 )}
 
                                 <div className={`p-3 pt-3 ${view === 'add' ? 'pb-0' : 'pb-24'}`}>
-                                    {view === 'list' && <ExpenseList expenses={filteredExpenses} onEdit={(item) => { setEditItem(item); setView('add'); }} onDelete={handleDelete} />}
-                                    {view === 'add' && <AddForm apiKeys={apiKeys} onUpdateKeys={handleUpdateKeys} categories={categories} onAddCategory={handleAddCategory} initialData={editItem} onSave={handleSave} onBatchSave={handleBatchSave} onCancel={() => { setView('list'); setEditItem(null); }} showAlert={showAlert} onOpenCalculator={openCalculator} />}
+                                    {view === 'list' && <ExpenseList expenses={filteredExpenses} onEdit={(item) => { setEditItem(item); setView('add'); window.history.pushState({ appView: 'add', tripId }, '', `#project-${tripId}-edit`); }} onDelete={handleDelete} />}
+                                    {view === 'add' && <AddForm apiKeys={apiKeys} onUpdateKeys={handleUpdateKeys} categories={categories} onAddCategory={handleAddCategory} initialData={editItem} onSave={handleSave} onBatchSave={handleBatchSave} onCancel={() => { setView('list'); setEditItem(null); if (window.history.state?.appView === 'add') window.history.back(); }} showAlert={showAlert} onOpenCalculator={openCalculator} />}
                                 </div>
 
                                 {showAnalysis && <AnalysisModal expenses={expenses} apiKeys={apiKeys} onClose={() => setShowAnalysis(false)} />}
@@ -781,7 +902,7 @@
                         )}
                     </div>
 
-                    {view === 'list' && <div className="fab-container"><div className="fab-wrapper"><button onClick={() => setView('add')} className="fab-btn"><i className="fa-solid fa-plus"></i></button></div></div>}
+                    {view === 'list' && <div className="fab-container"><div className="fab-wrapper"><button aria-label="新增花費" onClick={() => { setEditItem(null); setView('add'); window.history.pushState({ appView: 'add', tripId }, '', `#project-${tripId}-add`); }} className="fab-btn"><i className="fa-solid fa-plus"></i></button></div></div>}
                 </>
             );
         };
@@ -915,7 +1036,7 @@
             </div>
         );
 
-        const ProjectsView = ({ user, projects, projectTotals, apiKeys, onUpdateKeys, onCloudSaveKeys, onCloudLoadKeys, onCreate, onOpen, onLogout, onInstall, onBackup, onRestore }) => {
+        const ProjectsView = ({ user, projects, projectTotals, purchaseCount, apiKeys, onUpdateKeys, onCloudSaveKeys, onCloudLoadKeys, onCreate, onOpen, onOpenPurchases, onLogout, onInstall, onBackup, onRestore }) => {
             const [name, setName] = React.useState('');
             const [keys, setKeys] = React.useState(apiKeys || ['', '', '']);
             const [keysSaved, setKeysSaved] = React.useState(false);
@@ -961,6 +1082,13 @@
                         <button onClick={() => restoreInput.current?.click()} className="card-soft py-3 text-xs font-semibold text-ink-600"><i className="fa-solid fa-cloud-arrow-up block text-lg mb-1"></i>還原</button>
                         <input ref={restoreInput} type="file" accept="application/json,.json" className="hidden" onChange={e => { onRestore(e.target.files?.[0]); e.target.value = ''; }} />
                     </div>
+                    <button type="button" onClick={onOpenPurchases} className="card-soft p-4 mb-5 w-full text-left flex items-center justify-between hover:border-ink-300 transition-colors" aria-label="開啟代買清單">
+                        <div className="flex items-center gap-3 min-w-0">
+                            <span className="w-10 h-10 rounded-xl bg-ink-50 text-ink-600 flex items-center justify-center flex-shrink-0" aria-hidden="true"><svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M6 7h12l-1 13H7L6 7Z"/><path d="M9 9V5a3 3 0 0 1 6 0v4"/></svg></span>
+                            <div className="min-w-0"><p className="font-bold text-stone-700">代買清單</p><p className="text-[10px] text-stone-400 mt-0.5">記錄別人請你代買的品項</p></div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0"><span className="text-xs font-bold text-ink-600 bg-ink-50 px-2.5 py-1 rounded-full">{purchaseCount || 0} 待買</span><svg className="w-4 h-4 text-stone-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></div>
+                    </button>
                     <div className="mb-5">
                         <h2 className="font-bold text-stone-700 mb-2">我的專案</h2>
                         {projects.length === 0 ? <div className="text-center py-10 text-stone-400 card-soft"><i className="fa-regular fa-folder-open text-3xl mb-3 block"></i><p className="text-sm">還沒有專案，建立第一趟旅程吧！</p></div> : <div className="space-y-2">{projects.map(project => <button key={project.id} onClick={() => onOpen(project)} className="card-soft p-4 w-full text-left flex items-center justify-between hover:border-ink-300 transition-colors"><div className="min-w-0"><p className="font-bold text-stone-700 truncate">{project.name}</p><p className="text-[10px] text-stone-400 mt-1">{project.createdAt?.seconds ? new Date(project.createdAt.seconds * 1000).toLocaleDateString('zh-TW') : '剛剛建立'}</p></div><div className="flex items-center gap-3 flex-shrink-0 ml-3"><div className="text-right"><p className="text-[10px] text-stone-400">總支出</p><p className="font-extrabold text-ink-600">NT$ {Number(projectTotals?.[project.id] || 0).toLocaleString('zh-TW', { maximumFractionDigits: 0 })}</p></div><i className="fa-solid fa-chevron-right text-stone-300"></i></div></button>)}</div>}
@@ -983,6 +1111,104 @@
                             </div>
                         </div>
                     </details>
+                </div>
+            );
+        };
+
+        const PurchaseListView = ({ user, items, apiKeys, onBack, onAdd, onBatchAdd, onToggle, onDelete, showAlert }) => {
+            const [form, setForm] = React.useState({ name: '', quantity: 1, requester: '', note: '' });
+            const [saving, setSaving] = React.useState(false);
+            const [scanning, setScanning] = React.useState(false);
+            const [scanItems, setScanItems] = React.useState([]);
+            const scanInput = React.useRef(null);
+            const canScan = String(user?.email || '').toLowerCase() === PURCHASE_SCAN_ACCOUNT;
+            const pendingCount = items.filter(item => !item.purchased).length;
+
+            const submitManual = async event => {
+                event.preventDefault();
+                if (!form.name.trim()) return showAlert('請輸入代買品項', '提示');
+                setSaving(true);
+                try {
+                    await onAdd(form);
+                    setForm(prev => ({ name: '', quantity: 1, requester: '', note: '', }));
+                } catch (e) { showAlert('新增失敗：' + e.message, '錯誤'); }
+                finally { setSaving(false); }
+            };
+
+            const scanPurchaseImage = async file => {
+                if (!file) return;
+                if (!canScan) return showAlert('這個帳戶僅支援手動新增代買品項', '提示');
+                setScanning(true);
+                setScanItems([]);
+                try {
+                    const image = await prepareImageForGemini(file);
+                    const prompt = `請辨識這張圖片中別人委託代買的清單。圖片可能是聊天截圖、手寫清單、商品截圖或訂單畫面。請只回傳 JSON 陣列，每筆格式為 {"name":"品項名稱","quantity":1,"requester":"委託人","note":"規格、顏色、尺寸或其他備註"}。無法確定的委託人或備註請填空字串；數量不明時填 1；不要加入價格、聊天寒暄或非商品內容。`;
+                    const data = await callGemini(apiKeys, {
+                        contents: [{ parts: [{ text: prompt }, { inlineData: image }] }],
+                        generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 2048 }
+                    }, 90000);
+                    const raw = data.candidates?.[0]?.content?.parts?.map(part => part.text || '').join('') || '';
+                    const parsed = JSON.parse(raw.replace(/```json|```/gi, '').trim());
+                    const result = (Array.isArray(parsed) ? parsed : parsed.items || []).map(item => ({
+                        name: String(item?.name || '').trim(),
+                        quantity: Math.max(1, Number(item?.quantity) || 1),
+                        requester: String(item?.requester || '').trim(),
+                        note: String(item?.note || '').trim()
+                    })).filter(item => item.name);
+                    if (!result.length) throw new Error('圖片中找不到可辨識的代買品項');
+                    setScanItems(result);
+                } catch (e) { showAlert('辨識失敗：' + e.message, '錯誤'); }
+                finally { setScanning(false); }
+            };
+
+            const saveScanItems = async () => {
+                setSaving(true);
+                try {
+                    await onBatchAdd(scanItems);
+                    setScanItems([]);
+                    showAlert('代買品項已加入清單', '完成');
+                } catch (e) { showAlert('儲存失敗：' + e.message, '錯誤'); }
+                finally { setSaving(false); }
+            };
+
+            const updateScanItem = (index, field, value) => setScanItems(prev => prev.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: value } : item));
+
+            return (
+                <div className="flex-grow w-full pb-8">
+                    <header className="bg-paper-50/95 backdrop-blur-md border-b border-paper-200 sticky top-0 z-30 px-4 py-3 flex items-center gap-3">
+                        <button type="button" onClick={onBack} aria-label="返回全部專案" className="w-9 h-9 rounded-full border border-stone-200 bg-white text-ink-600 flex items-center justify-center shadow-sm"><svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+                        <div className="min-w-0 flex-1"><h1 className="font-extrabold text-stone-700 text-lg">代買清單</h1><p className="text-[10px] text-stone-400">{pendingCount} 項待購買</p></div>
+                        {canScan && <><button type="button" onClick={() => scanInput.current?.click()} disabled={scanning} className="bg-ink-500 text-white rounded-xl px-3 py-2 text-xs font-bold flex items-center gap-1.5 disabled:opacity-50" aria-label="上傳圖片辨識代買清單"><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 15-4-4L5 19"/></svg>{scanning ? '辨識中' : '圖片辨識'}</button><input ref={scanInput} type="file" accept="image/*" className="hidden" onChange={event => { scanPurchaseImage(event.target.files?.[0]); event.target.value = ''; }} /></>}
+                    </header>
+
+                    <main className="p-4 space-y-4">
+                        {canScan && <p className="text-[11px] text-stone-400 leading-relaxed bg-ink-50/60 border border-ink-100 rounded-xl px-3 py-2">可上傳聊天截圖、手寫清單或商品圖片。圖片只用於當次辨識，不會保存到雲端。</p>}
+
+                        {scanItems.length > 0 && <section className="card-soft p-4" aria-label="圖片辨識結果">
+                            <div className="flex items-center justify-between mb-3"><div><h2 className="font-bold text-stone-700">確認辨識結果</h2><p className="text-[10px] text-stone-400 mt-0.5">儲存前可以直接修改</p></div><button type="button" onClick={() => setScanItems([])} aria-label="取消圖片辨識結果" className="text-xs text-stone-400 px-2 py-1">取消</button></div>
+                            <div className="space-y-3">{scanItems.map((item, index) => <div key={index} className="bg-paper-50 border border-paper-200 rounded-xl p-3 space-y-2">
+                                <div className="flex gap-2"><input value={item.name} onChange={e => updateScanItem(index, 'name', e.target.value)} className="input-field text-sm flex-1" aria-label={`第 ${index + 1} 筆品項`} placeholder="品項"/><input type="number" min="1" inputMode="numeric" value={item.quantity} onChange={e => updateScanItem(index, 'quantity', e.target.value)} className="input-field text-sm w-20" aria-label={`第 ${index + 1} 筆數量`} placeholder="數量"/></div>
+                                <div className="grid grid-cols-2 gap-2"><input value={item.requester} onChange={e => updateScanItem(index, 'requester', e.target.value)} className="input-field text-xs" aria-label={`第 ${index + 1} 筆委託人`} placeholder="委託人（選填）"/><input value={item.note} onChange={e => updateScanItem(index, 'note', e.target.value)} className="input-field text-xs" aria-label={`第 ${index + 1} 筆備註`} placeholder="規格／備註（選填）"/></div>
+                            </div>)}</div>
+                            <button type="button" onClick={saveScanItems} disabled={saving || !scanItems.some(item => item.name.trim())} className="btn-primary py-2.5 text-sm mt-3 disabled:opacity-50">加入 {scanItems.filter(item => item.name.trim()).length} 筆品項</button>
+                        </section>}
+
+                        <form onSubmit={submitManual} className="card-soft p-4">
+                            <h2 className="font-bold text-stone-700 mb-3">手動新增</h2>
+                            <div className="flex gap-2"><input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="input-field text-sm flex-1" placeholder="代買品項" aria-label="代買品項"/><input type="number" min="1" inputMode="numeric" value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })} className="input-field text-sm w-20" placeholder="數量" aria-label="數量"/></div>
+                            <div className="grid grid-cols-2 gap-2 mt-2"><input value={form.requester} onChange={e => setForm({ ...form, requester: e.target.value })} className="input-field text-xs" placeholder="委託人（選填）" aria-label="委託人"/><input value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} className="input-field text-xs" placeholder="規格／備註（選填）" aria-label="規格或備註"/></div>
+                            <button type="submit" disabled={saving || !form.name.trim()} className="btn-primary py-2.5 text-sm mt-3 disabled:opacity-50">加入清單</button>
+                        </form>
+
+                        <section aria-label="代買品項">
+                            <div className="flex items-center justify-between mb-2 px-1"><h2 className="font-bold text-stone-700">清單內容</h2><span className="text-[10px] text-stone-400">共 {items.length} 項</span></div>
+                            {items.length === 0 ? <div className="card-soft text-center py-12 text-stone-400"><svg className="w-9 h-9 mx-auto mb-3 text-ink-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 7h12l-1 13H7L6 7Z"/><path d="M9 9V5a3 3 0 0 1 6 0v4"/></svg><p className="text-sm">還沒有代買品項</p></div> : <div className="space-y-2">{items.map(item => <article key={item.id} className={`card-soft p-3 flex items-start gap-3 transition-opacity ${item.purchased ? 'opacity-55' : ''}`}>
+                                <button type="button" onClick={() => onToggle(item).catch(e => showAlert('更新失敗：' + e.message, '錯誤'))} aria-label={item.purchased ? `將 ${item.name} 標記為待買` : `將 ${item.name} 標記為已購買`} className={`w-7 h-7 mt-0.5 rounded-lg border flex items-center justify-center flex-shrink-0 ${item.purchased ? 'bg-ink-500 border-ink-500 text-white' : 'bg-white border-ink-300 text-transparent'}`}><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button>
+                                <div className="flex-1 min-w-0"><div className="flex items-start justify-between gap-2"><p className={`font-bold text-sm text-stone-700 break-words ${item.purchased ? 'line-through' : ''}`}>{item.name}</p><span className="text-xs font-bold text-ink-600 bg-ink-50 rounded-lg px-2 py-1 flex-shrink-0">× {item.quantity || 1}</span></div>{(item.requester || item.note) && <p className="text-[11px] text-stone-400 mt-1 break-words">{item.requester && `委託人：${item.requester}`}{item.requester && item.note && ' · '}{item.note}</p>}</div>
+                                <button type="button" onClick={() => onDelete(item)} aria-label={`刪除 ${item.name}`} className="w-8 h-8 rounded-lg text-stone-300 hover:text-clay-500 hover:bg-clay-50 flex items-center justify-center flex-shrink-0"><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="m7 7 1 13h8l1-13"/></svg></button>
+                            </article>)}</div>}
+                        </section>
+                    </main>
                 </div>
             );
         };
