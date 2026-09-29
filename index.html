@@ -1364,7 +1364,7 @@
                     </header>
 
                     <main className="p-4 space-y-4">
-                        {canScan && <p className="text-[11px] text-stone-400 leading-relaxed bg-ink-50/60 border border-ink-100 rounded-xl px-3 py-2">可上傳聊天截圖、手寫清單或商品圖片。圖片只用於當次辨識，不會保存到雲端。</p>}
+                        {canScan && <p className="text-[11px] text-stone-400 leading-relaxed bg-ink-50/60 border border-ink-100 rounded-xl px-3 py-2">可上傳聊天截圖、手寫清單或商品圖片。圖片會先壓縮，再隨品項保存供清單預覽。</p>}
 
                         {scanItems.length > 0 && <section className="card-soft p-4" aria-label="圖片辨識結果">
                             <div className="flex items-center justify-between mb-3"><div><h2 className="font-bold text-stone-700">確認辨識結果</h2><p className="text-[10px] text-stone-400 mt-0.5">儲存前可以直接修改</p></div><button type="button" onClick={() => setScanItems([])} aria-label="取消圖片辨識結果" className="text-xs text-stone-400 px-2 py-1">取消</button></div>

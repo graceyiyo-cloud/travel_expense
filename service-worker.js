@@ -1,4 +1,4 @@
-const CACHE_NAME = 'travel-expense-v6';
+const CACHE_NAME = 'travel-expense-v7';
 const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './app-icon-180.png', './app-icon-192.png', './app-icon-512.png'];
 
 self.addEventListener('install', event => {
