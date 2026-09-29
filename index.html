@@ -393,6 +393,7 @@
             const [projects, setProjects] = React.useState([]);
             const [projectTotals, setProjectTotals] = React.useState({});
             const [purchaseItems, setPurchaseItems] = React.useState([]);
+            const [pendingExpenseBatches, setPendingExpenseBatches] = React.useState([]);
             const [installPrompt, setInstallPrompt] = React.useState(null);
             const [apiKeys, setApiKeys] = React.useState(loadGeminiKeys);
             const [expenses, setExpenses] = React.useState([]);
@@ -421,7 +422,7 @@
                     setView(u ? 'projects' : 'login');
                     const baseUrl = window.location.pathname + window.location.search;
                     window.history.replaceState({ appView: u ? 'projects' : 'login' }, '', baseUrl);
-                    if (!u) { setTripId(''); setProjects([]); setExpenses([]); setPurchaseItems([]); }
+                    if (!u) { setTripId(''); setProjects([]); setExpenses([]); setPurchaseItems([]); setPendingExpenseBatches([]); }
                 });
             }, []);
 
@@ -431,6 +432,11 @@
                     const state = event.state || {};
                     if (state.appView === 'purchases') {
                         setView('purchases');
+                        setTripId('');
+                        return;
+                    }
+                    if (state.appView === 'pending-expenses') {
+                        setView('pending-expenses');
                         setTripId('');
                         return;
                     }
@@ -494,9 +500,20 @@
                     }, e => showAlert("讀取代買清單失敗：" + e.message, "錯誤"));
             }, [user]);
 
+            React.useEffect(() => {
+                if (!user) return;
+                return db.collection('users').doc(user.uid).collection('pendingExpenseBatches')
+                    .where('status', '==', 'pending').onSnapshot(snap => {
+                        const rows = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        rows.sort((a, b) => Number(b.createdAt?.seconds || 0) - Number(a.createdAt?.seconds || 0));
+                        setPendingExpenseBatches(rows);
+                    }, e => showAlert('讀取待記帳紀錄失敗：' + e.message, '錯誤'));
+            }, [user]);
+
             const projectRef = (id = tripId) => db.collection('users').doc(user.uid).collection('projects').doc(id);
             const expensesRef = (id = tripId) => projectRef(id).collection('expenses');
             const purchaseItemsRef = () => db.collection('users').doc(user.uid).collection('purchaseItems');
+            const pendingExpensesRef = () => db.collection('users').doc(user.uid).collection('pendingExpenseBatches');
 
             React.useEffect(() => {
                 if (!user || !tripId) return;
@@ -575,6 +592,14 @@
                 }
             };
 
+            const handleOpenPendingExpenses = () => {
+                setTripId('');
+                setView('pending-expenses');
+                if (window.history.state?.appView !== 'pending-expenses') {
+                    window.history.pushState({ appView: 'pending-expenses' }, '', '#pending-expenses');
+                }
+            };
+
             const handleBackToProjects = () => {
                 if (window.history.state?.appView && window.history.state.appView !== 'projects') window.history.back();
                 else {
@@ -648,6 +673,47 @@
                 }, '刪除代買品項');
             };
 
+            const handleCreatePendingExpenseBatch = async data => {
+                await pendingExpensesRef().add({ ...data, status: 'pending', createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+            };
+
+            const handleUpdatePendingExpenseBatch = async (batchId, changes) => {
+                await pendingExpensesRef().doc(batchId).update({ ...changes, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+            };
+
+            const handleImportPendingExpenseBatch = async ({ batch, projectId, items, currency, exchangeRate }) => {
+                const selectedItems = (items || []).filter(item => item.selected !== false && String(item.name || '').trim());
+                if (!projectId) throw new Error('請選擇要加入的專案');
+                if (!selectedItems.length) throw new Error('請至少保留一個品項');
+                const rate = Number(exchangeRate);
+                if (!rate || rate <= 0) throw new Error('請確認匯率');
+                const writeBatch = db.batch();
+                selectedItems.forEach(item => {
+                    const expenseDoc = expensesRef(projectId).doc();
+                    const foreignAmount = Number(item.finalAmount) || 0;
+                    writeBatch.set(expenseDoc, {
+                        item: String(item.name).trim(),
+                        category: item.category || '購物',
+                        currency,
+                        foreignAmount,
+                        exchangeRate: currency === 'TWD' ? 1 : rate,
+                        twdAmount: Math.round(foreignAmount * (currency === 'TWD' ? 1 : rate)),
+                        pendingBatchId: batch.id,
+                        receiptMerchant: batch.merchant || '',
+                        receiptDate: batch.receiptDate || '',
+                        adjustment: Number(item.allocatedAdjustment) || 0,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                });
+                writeBatch.update(pendingExpensesRef().doc(batch.id), {
+                    status: 'imported', importedProjectId: projectId,
+                    importedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                writeBatch.set(projectRef(projectId), { updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+                await writeBatch.commit();
+            };
+
             const handleInstallApp = async () => {
                 if (installPrompt) {
                     await installPrompt.prompt();
@@ -673,7 +739,9 @@
                     }
                     const purchaseSnap = await purchaseItemsRef().orderBy('createdAt', 'asc').get();
                     const backupPurchaseItems = purchaseSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    const payload = { format: 'travel-expense-backup', version: 2, exportedAt: new Date().toISOString(), projects: backupProjects, purchaseItems: backupPurchaseItems };
+                    const pendingSnap = await pendingExpensesRef().get();
+                    const backupPendingExpenses = pendingSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    const payload = { format: 'travel-expense-backup', version: 3, exportedAt: new Date().toISOString(), projects: backupProjects, purchaseItems: backupPurchaseItems, pendingExpenseBatches: backupPendingExpenses };
                     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
                     const link = document.createElement('a');
@@ -689,7 +757,7 @@
                 if (!file) return;
                 try {
                     const data = JSON.parse(await file.text());
-                    if (data.format !== 'travel-expense-backup' || ![1, 2].includes(data.version) || !Array.isArray(data.projects)) throw new Error('不支援的備份格式');
+                    if (data.format !== 'travel-expense-backup' || ![1, 2, 3].includes(data.version) || !Array.isArray(data.projects)) throw new Error('不支援的備份格式');
                     let restoredCount = 0;
                     for (const project of data.projects) {
                         const newId = db.collection('_').doc().id;
@@ -726,7 +794,18 @@
                         });
                         await batch.commit();
                     }
-                    showAlert(`已還原 ${restoredCount} 個專案與 ${purchaseItems.length} 筆代買品項；原有資料沒有被覆蓋。`, "還原完成");
+                    const pendingBatches = Array.isArray(data.pendingExpenseBatches) ? data.pendingExpenseBatches : [];
+                    for (let start = 0; start < pendingBatches.length; start += 400) {
+                        const batch = db.batch();
+                        pendingBatches.slice(start, start + 400).forEach(item => {
+                            const { id, ...pendingItem } = item;
+                            pendingItem.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                            pendingItem.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+                            batch.set(pendingExpensesRef().doc(), pendingItem);
+                        });
+                        await batch.commit();
+                    }
+                    showAlert(`已還原 ${restoredCount} 個專案、${purchaseItems.length} 筆代買品項與 ${pendingBatches.length} 筆待記帳紀錄；原有資料沒有被覆蓋。`, "還原完成");
                 } catch (e) { showAlert("還原失敗：" + e.message, "錯誤"); }
             };
 
@@ -909,9 +988,11 @@
                         ) : view === 'login' ? (
                             <GoogleLoginView onLogin={handleGoogleLogin} />
                         ) : view === 'projects' ? (
-                            <ProjectsView user={user} projects={projects} projectTotals={projectTotals} purchaseCount={purchaseItems.filter(item => !item.purchased).length} apiKeys={apiKeys} onUpdateKeys={handleUpdateKeys} onCloudSaveKeys={handleCloudSaveKeys} onCloudLoadKeys={handleCloudLoadKeys} onCreate={handleCreateProject} onOpen={handleOpenProject} onOpenPurchases={handleOpenPurchases} onLogout={() => auth.signOut()} onInstall={handleInstallApp} onBackup={handleBackup} onRestore={handleRestore} />
+                            <ProjectsView user={user} projects={projects} projectTotals={projectTotals} purchaseCount={purchaseItems.filter(item => !item.purchased).length} pendingExpenseCount={pendingExpenseBatches.length} apiKeys={apiKeys} onUpdateKeys={handleUpdateKeys} onCloudSaveKeys={handleCloudSaveKeys} onCloudLoadKeys={handleCloudLoadKeys} onCreate={handleCreateProject} onOpen={handleOpenProject} onOpenPurchases={handleOpenPurchases} onOpenPendingExpenses={handleOpenPendingExpenses} onLogout={() => auth.signOut()} onInstall={handleInstallApp} onBackup={handleBackup} onRestore={handleRestore} />
                         ) : view === 'purchases' ? (
                             <PurchaseListView user={user} items={purchaseItems} apiKeys={apiKeys} onBack={handleBackToProjects} onAdd={handleAddPurchaseItem} onBatchAdd={handleBatchAddPurchaseItems} onUpdate={handleUpdatePurchaseItem} onComplete={handleCompletePurchaseItem} onReopen={handleReopenPurchaseItem} onDelete={handleDeletePurchaseItem} showAlert={showAlert} />
+                        ) : view === 'pending-expenses' ? (
+                            <PendingExpensesView batches={pendingExpenseBatches} projects={projects} apiKeys={apiKeys} onBack={handleBackToProjects} onCreate={handleCreatePendingExpenseBatch} onUpdate={handleUpdatePendingExpenseBatch} onImport={handleImportPendingExpenseBatch} showAlert={showAlert} />
                         ) : (
                             <>
                                 {view === 'list' && (
@@ -1084,7 +1165,7 @@
             </div>
         );
 
-        const ProjectsView = ({ user, projects, projectTotals, purchaseCount, apiKeys, onUpdateKeys, onCloudSaveKeys, onCloudLoadKeys, onCreate, onOpen, onOpenPurchases, onLogout, onInstall, onBackup, onRestore }) => {
+        const ProjectsView = ({ user, projects, projectTotals, purchaseCount, pendingExpenseCount, apiKeys, onUpdateKeys, onCloudSaveKeys, onCloudLoadKeys, onCreate, onOpen, onOpenPurchases, onOpenPendingExpenses, onLogout, onInstall, onBackup, onRestore }) => {
             const [name, setName] = React.useState('');
             const [keys, setKeys] = React.useState(apiKeys || ['', '', '']);
             const [keysSaved, setKeysSaved] = React.useState(false);
@@ -1136,6 +1217,10 @@
                             <div className="min-w-0"><p className="font-bold text-stone-700">代買清單</p><p className="text-[10px] text-stone-400 mt-0.5">記錄別人請你代買的品項</p></div>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0"><span className="text-xs font-bold text-ink-600 bg-ink-50 px-2.5 py-1 rounded-full">{purchaseCount || 0} 待買</span><svg className="w-4 h-4 text-stone-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></div>
+                    </button>
+                    <button type="button" onClick={onOpenPendingExpenses} className="card-soft p-4 mb-5 w-full text-left flex items-center justify-between hover:border-ink-300 transition-colors" aria-label="開啟待記帳紀錄">
+                        <div className="flex items-center gap-3 min-w-0"><span className="w-10 h-10 rounded-xl bg-clay-50 text-clay-500 flex items-center justify-center flex-shrink-0" aria-hidden="true"><svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2h9l3 3v17H6z"/><path d="M14 2v4h4M9 11h6M9 15h6"/></svg></span><div className="min-w-0"><p className="font-bold text-stone-700">待記帳紀錄</p><p className="text-[10px] text-stone-400 mt-0.5">掃描發票，確認後再加入帳本</p></div></div>
+                        <div className="flex items-center gap-2 flex-shrink-0"><span className="text-xs font-bold text-clay-500 bg-clay-50 px-2.5 py-1 rounded-full">{pendingExpenseCount || 0} 筆</span><svg className="w-4 h-4 text-stone-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></div>
                     </button>
                     <div className="mb-5">
                         <h2 className="font-bold text-stone-700 mb-2">我的專案</h2>
@@ -1395,6 +1480,119 @@
                     </main>
                 </div>
             );
+        };
+
+        const PendingExpensesView = ({ batches, projects, apiKeys, onBack, onCreate, onImport, showAlert }) => {
+            const [scanning, setScanning] = React.useState(false);
+            const [saving, setSaving] = React.useState(false);
+            const [reviewBatch, setReviewBatch] = React.useState(null);
+            const [reviewItems, setReviewItems] = React.useState([]);
+            const [projectId, setProjectId] = React.useState('');
+            const [currency, setCurrency] = React.useState('JPY');
+            const [exchangeRate, setExchangeRate] = React.useState('');
+            const [loadingRate, setLoadingRate] = React.useState(false);
+            const [rateError, setRateError] = React.useState('');
+            const [previewImage, setPreviewImage] = React.useState('');
+            const receiptInput = React.useRef(null);
+
+            React.useEffect(() => {
+                const handlePopState = event => {
+                    if (event.state?.pendingLayer !== 'image') setPreviewImage('');
+                    if (!['review', 'image'].includes(event.state?.pendingLayer)) setReviewBatch(null);
+                };
+                window.addEventListener('popstate', handlePopState);
+                return () => window.removeEventListener('popstate', handlePopState);
+            }, []);
+
+            const allocateReceipt = parsed => {
+                const sourceItems = (Array.isArray(parsed?.items) ? parsed.items : []).map(item => ({ name: String(item?.name || '').trim(), quantity: Math.max(1, Number(item?.quantity) || 1), originalAmount: Math.max(0, Number(item?.lineAmount) || 0) })).filter(item => item.name && item.originalAmount > 0);
+                if (!sourceItems.length) throw new Error('發票中找不到可記帳的品項');
+                const originalTotal = sourceItems.reduce((sum, item) => sum + item.originalAmount, 0);
+                const adjustments = (Array.isArray(parsed?.adjustments) ? parsed.adjustments : []).map(row => ({ label: String(row?.label || '折扣／退稅'), amount: Number(row?.amount) || 0 })).filter(row => row.amount !== 0);
+                const statedTotal = Number(parsed?.total);
+                const adjustmentTotal = Number.isFinite(statedTotal) && statedTotal >= 0 ? statedTotal - originalTotal : adjustments.reduce((sum, row) => sum + row.amount, 0);
+                let allocatedSoFar = 0;
+                const items = sourceItems.map((item, index) => {
+                    const allocatedAdjustment = index === sourceItems.length - 1 ? Number((adjustmentTotal - allocatedSoFar).toFixed(2)) : Number((adjustmentTotal * item.originalAmount / originalTotal).toFixed(2));
+                    allocatedSoFar += allocatedAdjustment;
+                    return { ...item, allocatedAdjustment, finalAmount: Number((item.originalAmount + allocatedAdjustment).toFixed(2)), selected: true, category: '購物' };
+                });
+                return { merchant: String(parsed?.merchant || '未辨識商店').trim(), receiptDate: String(parsed?.date || '').trim(), currency: currencies.includes(parsed?.currency) ? parsed.currency : 'JPY', originalTotal, adjustmentTotal: Number(adjustmentTotal.toFixed(2)), total: Number((originalTotal + adjustmentTotal).toFixed(2)), adjustments, items };
+            };
+
+            const scanReceipt = async file => {
+                if (!file) return;
+                setScanning(true);
+                try {
+                    const [image, receiptImage] = await Promise.all([prepareImageForGemini(file), preparePurchasePreview(file)]);
+                    const prompt = `請辨識這張發票或收據，並只回傳 JSON：{"merchant":"商店名稱","date":"YYYY-MM-DD","currency":"JPY","total":實際付款總額,"items":[{"name":"品項","quantity":1,"lineAmount":折扣前該品項小計}],"adjustments":[{"label":"折扣或退稅名稱","amount":負數金額}]}。items 不要包含小計、稅額、折扣、退稅或付款方式；lineAmount 必須是該品項折扣前小計。整單折扣、優惠券、免稅、退稅請放 adjustments 並使用負數；若是加收費用則使用正數。total 必須是所有折扣與退稅後實際應付金額。看不清楚時不要猜測品項。`;
+                    const data = await callGemini(apiKeys, { contents: [{ parts: [{ text: prompt }, { inlineData: image }] }], generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 4096 } }, 90000);
+                    const raw = data.candidates?.[0]?.content?.parts?.map(part => part.text || '').join('') || '';
+                    const parsed = JSON.parse(raw.replace(/```json|```/gi, '').trim());
+                    const allocated = allocateReceipt(parsed);
+                    await onCreate({ ...allocated, receiptImage });
+                    showAlert(`已建立 ${allocated.items.length} 筆待記帳品項；折扣／退稅已按原價比例分攤。`, '掃描完成');
+                } catch (e) { showAlert('發票辨識失敗：' + e.message, '錯誤'); }
+                finally { setScanning(false); }
+            };
+
+            const loadRate = async selectedCurrency => {
+                setCurrency(selectedCurrency); setRateError(''); setLoadingRate(selectedCurrency !== 'TWD'); setExchangeRate(selectedCurrency === 'TWD' ? '1' : '');
+                try { const result = await getCurrentExchangeRate(selectedCurrency); setExchangeRate(String(result.rate)); }
+                catch (e) { setRateError(e.message); }
+                finally { setLoadingRate(false); }
+            };
+
+            const openReview = batch => {
+                const firstProject = projects[0];
+                const defaultCategory = firstProject?.categories?.includes('購物') ? '購物' : (firstProject?.categories?.[0] || '其他');
+                setReviewBatch(batch); setProjectId(firstProject?.id || '');
+                setReviewItems((batch.items || []).map(item => ({ ...item, selected: item.selected !== false, category: item.category || defaultCategory })));
+                window.history.pushState({ ...(window.history.state || {}), pendingLayer: 'review' }, '', window.location.href);
+                loadRate(batch.currency || 'JPY');
+            };
+
+            const closeReview = () => {
+                setReviewBatch(null);
+                if (window.history.state?.pendingLayer === 'review') window.history.back();
+            };
+
+            const openImagePreview = imageData => {
+                if (!imageData) return;
+                setPreviewImage(imageData);
+                window.history.pushState({ ...(window.history.state || {}), pendingLayer: 'image' }, '', window.location.href);
+            };
+
+            const closeImagePreview = () => {
+                setPreviewImage('');
+                if (window.history.state?.pendingLayer === 'image') window.history.back();
+            };
+
+            const updateReviewItem = (index, changes) => setReviewItems(prev => prev.map((item, itemIndex) => itemIndex === index ? { ...item, ...changes } : item));
+            const selectedProject = projects.find(project => project.id === projectId);
+            const projectCategories = selectedProject?.categories || defaultCategories;
+
+            const importBatch = async () => {
+                setSaving(true);
+                try { await onImport({ batch: reviewBatch, projectId, items: reviewItems, currency, exchangeRate }); closeReview(); showAlert('已加入帳本，待記帳紀錄已完成。', '完成'); }
+                catch (e) { showAlert('加入帳本失敗：' + e.message, '錯誤'); }
+                finally { setSaving(false); }
+            };
+
+            return <div className="flex-grow w-full pb-8">
+                {previewImage && <div className="fixed inset-0 bg-stone-900/80 z-[4000] flex items-center justify-center p-4 backdrop-blur-sm" onClick={closeImagePreview} role="dialog" aria-modal="true" aria-label="發票圖片預覽"><button type="button" onClick={event => { event.stopPropagation(); closeImagePreview(); }} aria-label="關閉發票圖片預覽" className="absolute right-4 top-4 w-10 h-10 rounded-full bg-white/90 text-stone-600 flex items-center justify-center shadow-lg"><svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button><img src={previewImage} alt="發票完整預覽" className="max-w-full max-h-[88vh] object-contain rounded-2xl shadow-2xl" onClick={event => event.stopPropagation()}/></div>}
+                {reviewBatch && <div className="fixed inset-0 bg-stone-800/40 z-[3000] flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm" onClick={closeReview}><div className="bg-paper-50 rounded-t-3xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[92vh] overflow-y-auto p-5 border border-paper-200" onClick={event => event.stopPropagation()}>
+                    <div className="flex items-center justify-between mb-4"><div><h2 className="font-bold text-stone-700">確認後加入帳本</h2><p className="text-[10px] text-stone-400">{reviewBatch.merchant} {reviewBatch.receiptDate && `· ${reviewBatch.receiptDate}`}</p></div><button type="button" onClick={closeReview} aria-label="關閉待記帳確認" className="w-8 h-8 rounded-full border border-stone-200 bg-white text-stone-400 flex items-center justify-center"><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+                    {reviewBatch.receiptImage && <button type="button" onClick={() => openImagePreview(reviewBatch.receiptImage)} className="w-full mb-3 rounded-xl overflow-hidden border border-paper-200 bg-white text-left" aria-label="查看發票完整圖片"><img src={reviewBatch.receiptImage} alt={`${reviewBatch.merchant} 發票預覽`} className="w-full h-28 object-cover"/><span className="block px-3 py-1.5 text-[10px] text-ink-600 font-semibold">查看完整發票</span></button>}
+                    <label className="input-label">加入哪一個專案</label><select value={projectId} onChange={event => { setProjectId(event.target.value); const project = projects.find(row => row.id === event.target.value); const category = project?.categories?.includes('購物') ? '購物' : (project?.categories?.[0] || '其他'); setReviewItems(prev => prev.map(item => ({ ...item, category }))); }} className="input-field text-sm" aria-label="選擇記帳專案"><option value="">請選擇專案</option>{projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}</select>
+                    <div className="grid grid-cols-2 gap-2 mt-3"><label><span className="input-label">幣別</span><select value={currency} onChange={event => loadRate(event.target.value)} className="input-field text-sm" aria-label="待記帳幣別">{currencies.map(code => <option key={code}>{code}</option>)}</select></label><label><span className="input-label">匯率（兌 TWD）</span><input type="number" step="0.000001" value={exchangeRate} onChange={event => setExchangeRate(event.target.value)} className="input-field text-sm" aria-label="待記帳匯率" disabled={loadingRate}/></label></div>{rateError && <p className="text-[10px] text-clay-500 mt-1">{rateError}</p>}
+                    <div className="space-y-2 mt-4">{reviewItems.map((item, index) => <div key={index} className={`border rounded-xl p-3 ${item.selected ? 'bg-white border-ink-200' : 'bg-stone-50 border-stone-100 opacity-60'}`}><div className="flex items-start gap-2"><input type="checkbox" checked={item.selected} onChange={event => updateReviewItem(index, {selected:event.target.checked})} className="custom-checkbox mt-1" aria-label={`選取 ${item.name}`}/><div className="flex-1 min-w-0"><input value={item.name} onChange={event => updateReviewItem(index, {name:event.target.value})} className="w-full bg-transparent border-b border-dashed border-stone-200 font-bold text-sm outline-none" aria-label={`第 ${index+1} 筆待記帳品項`}/><div className="flex items-center gap-2 mt-2"><select value={item.category} onChange={event => updateReviewItem(index, {category:event.target.value})} className="bg-white border border-ink-200 rounded-lg px-2 py-1.5 text-xs" aria-label={`${item.name} 分類`}>{projectCategories.map(category => <option key={category}>{category}</option>)}</select><input type="number" step="0.01" value={item.finalAmount} onChange={event => updateReviewItem(index, {finalAmount:event.target.value})} className="ml-auto w-24 text-right bg-white border border-stone-200 rounded-lg px-2 py-1.5 text-xs font-bold" aria-label={`${item.name} 實付金額`}/></div><p className="text-[10px] text-stone-400 mt-2">原價 {currency} {Number(item.originalAmount).toLocaleString('zh-TW')} · 分攤調整 <span className={Number(item.allocatedAdjustment) < 0 ? 'text-green-600' : 'text-clay-500'}>{Number(item.allocatedAdjustment) > 0 ? '+' : ''}{Number(item.allocatedAdjustment).toLocaleString('zh-TW')}</span> · 實付 {currency} {Number(item.finalAmount).toLocaleString('zh-TW')}</p></div></div></div>)}</div>
+                    <div className="bg-ink-50 rounded-xl px-3 py-2.5 mt-3 text-xs">{(reviewBatch.adjustments || []).map((adjustment, index) => <div key={index} className="flex justify-between text-stone-500 mb-1"><span>{adjustment.label || '折扣／退稅'}</span><span>{currency} {Number(adjustment.amount || 0).toLocaleString('zh-TW')}</span></div>)}<div className="flex justify-between text-stone-500"><span>折扣／退稅分攤合計</span><span>{currency} {Number(reviewBatch.adjustmentTotal || 0).toLocaleString('zh-TW')}</span></div><div className="flex justify-between font-bold text-ink-700 mt-1"><span>確認品項合計</span><span>{currency} {reviewItems.filter(item => item.selected).reduce((sum,item)=>sum+(Number(item.finalAmount)||0),0).toLocaleString('zh-TW')}</span></div></div>
+                    <div className="grid grid-cols-2 gap-2 mt-4"><button type="button" onClick={closeReview} className="btn-secondary py-2.5 text-sm">稍後確認</button><button type="button" onClick={importBatch} disabled={saving || !projectId || loadingRate || !Number(exchangeRate)} className="btn-primary py-2.5 text-sm disabled:opacity-50">加入帳本</button></div>
+                </div></div>}
+                <header className="bg-paper-50/95 backdrop-blur-md border-b border-paper-200 sticky top-0 z-30 px-4 py-3 flex items-center gap-3"><button type="button" onClick={onBack} aria-label="返回全部專案" className="w-9 h-9 rounded-full border border-stone-200 bg-white text-ink-600 flex items-center justify-center shadow-sm"><svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><div className="flex-1"><h1 className="font-extrabold text-stone-700 text-lg">待記帳紀錄</h1><p className="text-[10px] text-stone-400">掃描後先確認，再加入帳本</p></div><button type="button" onClick={() => receiptInput.current?.click()} disabled={scanning} className="bg-ink-500 text-white rounded-xl px-3 py-2 text-xs font-bold disabled:opacity-50" aria-label="掃描發票">{scanning ? '辨識中…' : '掃描發票'}</button><input ref={receiptInput} type="file" accept="image/*" className="hidden" onChange={event => { scanReceipt(event.target.files?.[0]); event.target.value=''; }}/></header>
+                <main className="p-4 space-y-3"><p className="text-[11px] text-stone-400 bg-ink-50/60 border border-ink-100 rounded-xl px-3 py-2 leading-relaxed">整單折扣、優惠券、免稅與退稅會依品項原價比例分攤。加入帳本前仍可修改品名、分類與實付金額。</p>{batches.length === 0 ? <div className="card-soft text-center py-14 text-stone-400"><p className="text-sm">目前沒有待確認的發票</p></div> : batches.map(batch => <article key={batch.id} className="card-soft p-4"><div className="flex gap-3">{batch.receiptImage && <button type="button" onClick={() => openImagePreview(batch.receiptImage)} className="w-16 h-16 rounded-xl overflow-hidden border border-paper-200 bg-white flex-shrink-0" aria-label={`查看 ${batch.merchant} 發票圖片`}><img src={batch.receiptImage} alt={`${batch.merchant} 發票縮圖`} className="w-full h-full object-cover"/></button>}<div className="flex-1 min-w-0"><h2 className="font-bold text-stone-700 truncate">{batch.merchant}</h2><p className="text-[10px] text-stone-400 mt-0.5">{batch.receiptDate || '未辨識日期'} · {batch.items?.length || 0} 項</p><p className="font-extrabold text-ink-600 mt-1">{batch.currency} {Number(batch.total || 0).toLocaleString('zh-TW')}</p>{Number(batch.adjustmentTotal) !== 0 && <p className="text-[10px] text-green-600 mt-0.5">已分攤折扣／退稅 {batch.currency} {Number(batch.adjustmentTotal).toLocaleString('zh-TW')}</p>}</div></div><button type="button" onClick={() => openReview(batch)} className="btn-secondary py-2 text-xs mt-3">確認並選擇帳本</button></article>)}</main>
+            </div>;
         };
 
         const LoginView = ({ onLogin, handleDeleteHistory, defaultKey, history }) => {
