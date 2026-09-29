@@ -701,7 +701,7 @@
                         pendingBatchId: batch.id,
                         receiptMerchant: batch.merchant || '',
                         receiptDate: batch.receiptDate || '',
-                        adjustment: Number(item.allocatedAdjustment) || 0,
+                        adjustment: Math.round(foreignAmount - (Number(item.originalAmount) || 0)),
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
                 });
@@ -1482,7 +1482,7 @@
             );
         };
 
-        const PendingExpensesView = ({ batches, projects, apiKeys, onBack, onCreate, onImport, showAlert }) => {
+        const PendingExpensesView = ({ batches, projects, apiKeys, onBack, onCreate, onUpdate, onImport, showAlert }) => {
             const [scanning, setScanning] = React.useState(false);
             const [saving, setSaving] = React.useState(false);
             const [reviewBatch, setReviewBatch] = React.useState(null);
@@ -1505,19 +1505,19 @@
             }, []);
 
             const allocateReceipt = parsed => {
-                const sourceItems = (Array.isArray(parsed?.items) ? parsed.items : []).map(item => ({ name: String(item?.name || '').trim(), quantity: Math.max(1, Number(item?.quantity) || 1), originalAmount: Math.max(0, Number(item?.lineAmount) || 0) })).filter(item => item.name && item.originalAmount > 0);
+                const sourceItems = (Array.isArray(parsed?.items) ? parsed.items : []).map(item => ({ name: String(item?.name || '').trim(), quantity: Math.max(1, Number(item?.quantity) || 1), originalAmount: Math.max(0, Math.round(Number(item?.lineAmount) || 0)) })).filter(item => item.name && item.originalAmount > 0);
                 if (!sourceItems.length) throw new Error('發票中找不到可記帳的品項');
                 const originalTotal = sourceItems.reduce((sum, item) => sum + item.originalAmount, 0);
-                const adjustments = (Array.isArray(parsed?.adjustments) ? parsed.adjustments : []).map(row => ({ label: String(row?.label || '折扣／退稅'), amount: Number(row?.amount) || 0 })).filter(row => row.amount !== 0);
-                const statedTotal = Number(parsed?.total);
+                const adjustments = (Array.isArray(parsed?.adjustments) ? parsed.adjustments : []).map(row => ({ label: String(row?.label || '折扣／退稅'), amount: Math.round(Number(row?.amount) || 0) })).filter(row => row.amount !== 0);
+                const statedTotal = Math.round(Number(parsed?.total));
                 const adjustmentTotal = Number.isFinite(statedTotal) && statedTotal >= 0 ? statedTotal - originalTotal : adjustments.reduce((sum, row) => sum + row.amount, 0);
                 let allocatedSoFar = 0;
                 const items = sourceItems.map((item, index) => {
-                    const allocatedAdjustment = index === sourceItems.length - 1 ? Number((adjustmentTotal - allocatedSoFar).toFixed(2)) : Number((adjustmentTotal * item.originalAmount / originalTotal).toFixed(2));
+                    const allocatedAdjustment = index === sourceItems.length - 1 ? adjustmentTotal - allocatedSoFar : Math.round(adjustmentTotal * item.originalAmount / originalTotal);
                     allocatedSoFar += allocatedAdjustment;
-                    return { ...item, allocatedAdjustment, finalAmount: Number((item.originalAmount + allocatedAdjustment).toFixed(2)), selected: true, category: '購物' };
+                    return { ...item, allocatedAdjustment, finalAmount: item.originalAmount + allocatedAdjustment, selected: true, category: '購物' };
                 });
-                return { merchant: String(parsed?.merchant || '未辨識商店').trim(), receiptDate: String(parsed?.date || '').trim(), currency: currencies.includes(parsed?.currency) ? parsed.currency : 'JPY', originalTotal, adjustmentTotal: Number(adjustmentTotal.toFixed(2)), total: Number((originalTotal + adjustmentTotal).toFixed(2)), adjustments, items };
+                return { merchant: String(parsed?.merchant || '未辨識商店').trim(), receiptDate: String(parsed?.date || '').trim(), currency: currencies.includes(parsed?.currency) ? parsed.currency : 'JPY', originalTotal, adjustmentTotal, total: originalTotal + adjustmentTotal, adjustments, items };
             };
 
             const scanReceipt = async file => {
@@ -1525,7 +1525,7 @@
                 setScanning(true);
                 try {
                     const [image, receiptImage] = await Promise.all([prepareImageForGemini(file), preparePurchasePreview(file)]);
-                    const prompt = `請辨識這張發票或收據，並只回傳 JSON：{"merchant":"商店名稱","date":"YYYY-MM-DD","currency":"JPY","total":實際付款總額,"items":[{"name":"品項","quantity":1,"lineAmount":折扣前該品項小計}],"adjustments":[{"label":"折扣或退稅名稱","amount":負數金額}]}。items 不要包含小計、稅額、折扣、退稅或付款方式；lineAmount 必須是該品項折扣前小計。整單折扣、優惠券、免稅、退稅請放 adjustments 並使用負數；若是加收費用則使用正數。total 必須是所有折扣與退稅後實際應付金額。看不清楚時不要猜測品項。`;
+                    const prompt = `請辨識這張發票或收據，並只回傳繁體中文 JSON：{"merchant":"商店名稱","date":"YYYY-MM-DD","currency":"JPY","total":實際付款總額整數,"items":[{"name":"翻譯成繁體中文的品項名稱","quantity":1,"lineAmount":折扣前該品項小計整數}],"adjustments":[{"label":"翻譯成繁體中文的折扣或退稅名稱","amount":負數整數}]}。商品名稱必須翻譯成自然易懂的繁體中文，品牌或型號可在中文後保留原文；無法確定時才保留原文並標示待確認。items 不要包含小計、稅額、折扣、退稅或付款方式；lineAmount 必須是該品項折扣前小計。整單折扣、優惠券、免稅、退稅請放 adjustments 並使用負數；若是加收費用則使用正數。total 必須是所有折扣與退稅後實際應付金額。所有金額四捨五入為整數。看不清楚時不要猜測品項。`;
                     const data = await callGemini(apiKeys, { contents: [{ parts: [{ text: prompt }, { inlineData: image }] }], generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 4096 } }, 90000);
                     const raw = data.candidates?.[0]?.content?.parts?.map(part => part.text || '').join('') || '';
                     const parsed = JSON.parse(raw.replace(/```json|```/gi, '').trim());
@@ -1579,6 +1579,30 @@
                 finally { setSaving(false); }
             };
 
+            const savePendingChanges = async () => {
+                if (!reviewBatch) return;
+                setSaving(true);
+                try {
+                    const normalizedItems = reviewItems.map(item => {
+                        const originalAmount = Math.round(Number(item.originalAmount) || 0);
+                        const finalAmount = Math.round(Number(item.finalAmount) || 0);
+                        return { ...item, originalAmount, finalAmount, allocatedAdjustment: finalAmount - originalAmount };
+                    });
+                    const changes = {
+                        currency,
+                        items: normalizedItems,
+                        originalTotal: normalizedItems.reduce((sum, item) => sum + item.originalAmount, 0),
+                        adjustmentTotal: normalizedItems.reduce((sum, item) => sum + item.allocatedAdjustment, 0),
+                        total: normalizedItems.reduce((sum, item) => sum + item.finalAmount, 0)
+                    };
+                    await onUpdate(reviewBatch.id, changes);
+                    setReviewItems(normalizedItems);
+                    setReviewBatch(prev => ({ ...prev, ...changes }));
+                    showAlert('待記帳品名與整數金額已儲存。', '儲存完成');
+                } catch (e) { showAlert('儲存待記帳修改失敗：' + e.message, '錯誤'); }
+                finally { setSaving(false); }
+            };
+
             return <div className="flex-grow w-full pb-8">
                 {previewImage && <div className="fixed inset-0 bg-stone-900/80 z-[4000] flex items-center justify-center p-4 backdrop-blur-sm" onClick={closeImagePreview} role="dialog" aria-modal="true" aria-label="發票圖片預覽"><button type="button" onClick={event => { event.stopPropagation(); closeImagePreview(); }} aria-label="關閉發票圖片預覽" className="absolute right-4 top-4 w-10 h-10 rounded-full bg-white/90 text-stone-600 flex items-center justify-center shadow-lg"><svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button><img src={previewImage} alt="發票完整預覽" className="max-w-full max-h-[88vh] object-contain rounded-2xl shadow-2xl" onClick={event => event.stopPropagation()}/></div>}
                 {reviewBatch && <div className="fixed inset-0 bg-stone-800/40 z-[3000] flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm" onClick={closeReview}><div className="bg-paper-50 rounded-t-3xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[92vh] overflow-y-auto p-5 border border-paper-200" onClick={event => event.stopPropagation()}>
@@ -1586,9 +1610,9 @@
                     {reviewBatch.receiptImage && <button type="button" onClick={() => openImagePreview(reviewBatch.receiptImage)} className="w-full mb-3 rounded-xl overflow-hidden border border-paper-200 bg-white text-left" aria-label="查看發票完整圖片"><img src={reviewBatch.receiptImage} alt={`${reviewBatch.merchant} 發票預覽`} className="w-full h-28 object-cover"/><span className="block px-3 py-1.5 text-[10px] text-ink-600 font-semibold">查看完整發票</span></button>}
                     <label className="input-label">加入哪一個專案</label><select value={projectId} onChange={event => { setProjectId(event.target.value); const project = projects.find(row => row.id === event.target.value); const category = project?.categories?.includes('購物') ? '購物' : (project?.categories?.[0] || '其他'); setReviewItems(prev => prev.map(item => ({ ...item, category }))); }} className="input-field text-sm" aria-label="選擇記帳專案"><option value="">請選擇專案</option>{projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}</select>
                     <div className="grid grid-cols-2 gap-2 mt-3"><label><span className="input-label">幣別</span><select value={currency} onChange={event => loadRate(event.target.value)} className="input-field text-sm" aria-label="待記帳幣別">{currencies.map(code => <option key={code}>{code}</option>)}</select></label><label><span className="input-label">匯率（兌 TWD）</span><input type="number" step="0.000001" value={exchangeRate} onChange={event => setExchangeRate(event.target.value)} className="input-field text-sm" aria-label="待記帳匯率" disabled={loadingRate}/></label></div>{rateError && <p className="text-[10px] text-clay-500 mt-1">{rateError}</p>}
-                    <div className="space-y-2 mt-4">{reviewItems.map((item, index) => <div key={index} className={`border rounded-xl p-3 ${item.selected ? 'bg-white border-ink-200' : 'bg-stone-50 border-stone-100 opacity-60'}`}><div className="flex items-start gap-2"><input type="checkbox" checked={item.selected} onChange={event => updateReviewItem(index, {selected:event.target.checked})} className="custom-checkbox mt-1" aria-label={`選取 ${item.name}`}/><div className="flex-1 min-w-0"><input value={item.name} onChange={event => updateReviewItem(index, {name:event.target.value})} className="w-full bg-transparent border-b border-dashed border-stone-200 font-bold text-sm outline-none" aria-label={`第 ${index+1} 筆待記帳品項`}/><div className="flex items-center gap-2 mt-2"><select value={item.category} onChange={event => updateReviewItem(index, {category:event.target.value})} className="bg-white border border-ink-200 rounded-lg px-2 py-1.5 text-xs" aria-label={`${item.name} 分類`}>{projectCategories.map(category => <option key={category}>{category}</option>)}</select><input type="number" step="0.01" value={item.finalAmount} onChange={event => updateReviewItem(index, {finalAmount:event.target.value})} className="ml-auto w-24 text-right bg-white border border-stone-200 rounded-lg px-2 py-1.5 text-xs font-bold" aria-label={`${item.name} 實付金額`}/></div><p className="text-[10px] text-stone-400 mt-2">原價 {currency} {Number(item.originalAmount).toLocaleString('zh-TW')} · 分攤調整 <span className={Number(item.allocatedAdjustment) < 0 ? 'text-green-600' : 'text-clay-500'}>{Number(item.allocatedAdjustment) > 0 ? '+' : ''}{Number(item.allocatedAdjustment).toLocaleString('zh-TW')}</span> · 實付 {currency} {Number(item.finalAmount).toLocaleString('zh-TW')}</p></div></div></div>)}</div>
+                    <div className="space-y-2 mt-4">{reviewItems.map((item, index) => { const displayedAdjustment = Math.round((Number(item.finalAmount) || 0) - (Number(item.originalAmount) || 0)); return <div key={index} className={`border rounded-xl p-3 ${item.selected ? 'bg-white border-ink-200' : 'bg-stone-50 border-stone-100 opacity-60'}`}><div className="flex items-start gap-2"><input type="checkbox" checked={item.selected} onChange={event => updateReviewItem(index, {selected:event.target.checked})} className="custom-checkbox mt-1" aria-label={`選取 ${item.name}`}/><div className="flex-1 min-w-0"><input value={item.name} onChange={event => updateReviewItem(index, {name:event.target.value})} className="w-full bg-transparent border-b border-dashed border-stone-200 font-bold text-sm outline-none" aria-label={`第 ${index+1} 筆待記帳品項`}/><div className="flex items-center gap-2 mt-2"><select value={item.category} onChange={event => updateReviewItem(index, {category:event.target.value})} className="bg-white border border-ink-200 rounded-lg px-2 py-1.5 text-xs" aria-label={`${item.name} 分類`}>{projectCategories.map(category => <option key={category}>{category}</option>)}</select><input type="number" step="1" value={item.finalAmount} onChange={event => updateReviewItem(index, {finalAmount:event.target.value})} className="ml-auto w-24 text-right bg-white border border-stone-200 rounded-lg px-2 py-1.5 text-xs font-bold" aria-label={`${item.name} 實付金額`}/></div><p className="text-[10px] text-stone-400 mt-2">原價 {currency} {Math.round(Number(item.originalAmount) || 0).toLocaleString('zh-TW')} · 分攤調整 <span className={displayedAdjustment < 0 ? 'text-green-600' : 'text-clay-500'}>{displayedAdjustment > 0 ? '+' : ''}{displayedAdjustment.toLocaleString('zh-TW')}</span> · 實付 {currency} {Math.round(Number(item.finalAmount) || 0).toLocaleString('zh-TW')}</p></div></div></div>; })}</div>
                     <div className="bg-ink-50 rounded-xl px-3 py-2.5 mt-3 text-xs">{(reviewBatch.adjustments || []).map((adjustment, index) => <div key={index} className="flex justify-between text-stone-500 mb-1"><span>{adjustment.label || '折扣／退稅'}</span><span>{currency} {Number(adjustment.amount || 0).toLocaleString('zh-TW')}</span></div>)}<div className="flex justify-between text-stone-500"><span>折扣／退稅分攤合計</span><span>{currency} {Number(reviewBatch.adjustmentTotal || 0).toLocaleString('zh-TW')}</span></div><div className="flex justify-between font-bold text-ink-700 mt-1"><span>確認品項合計</span><span>{currency} {reviewItems.filter(item => item.selected).reduce((sum,item)=>sum+(Number(item.finalAmount)||0),0).toLocaleString('zh-TW')}</span></div></div>
-                    <div className="grid grid-cols-2 gap-2 mt-4"><button type="button" onClick={closeReview} className="btn-secondary py-2.5 text-sm">稍後確認</button><button type="button" onClick={importBatch} disabled={saving || !projectId || loadingRate || !Number(exchangeRate)} className="btn-primary py-2.5 text-sm disabled:opacity-50">加入帳本</button></div>
+                    <div className="grid grid-cols-3 gap-2 mt-4"><button type="button" onClick={closeReview} className="btn-secondary py-2.5 text-xs">稍後</button><button type="button" onClick={savePendingChanges} disabled={saving} className="btn-secondary py-2.5 text-xs disabled:opacity-50">儲存修改</button><button type="button" onClick={importBatch} disabled={saving || !projectId || loadingRate || !Number(exchangeRate)} className="btn-primary py-2.5 text-xs disabled:opacity-50">加入帳本</button></div>
                 </div></div>}
                 <header className="bg-paper-50/95 backdrop-blur-md border-b border-paper-200 sticky top-0 z-30 px-4 py-3 flex items-center gap-3"><button type="button" onClick={onBack} aria-label="返回全部專案" className="w-9 h-9 rounded-full border border-stone-200 bg-white text-ink-600 flex items-center justify-center shadow-sm"><svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><div className="flex-1"><h1 className="font-extrabold text-stone-700 text-lg">待記帳紀錄</h1><p className="text-[10px] text-stone-400">掃描後先確認，再加入帳本</p></div><button type="button" onClick={() => receiptInput.current?.click()} disabled={scanning} className="bg-ink-500 text-white rounded-xl px-3 py-2 text-xs font-bold disabled:opacity-50" aria-label="掃描發票">{scanning ? '辨識中…' : '掃描發票'}</button><input ref={receiptInput} type="file" accept="image/*" className="hidden" onChange={event => { scanReceipt(event.target.files?.[0]); event.target.value=''; }}/></header>
                 <main className="p-4 space-y-3"><p className="text-[11px] text-stone-400 bg-ink-50/60 border border-ink-100 rounded-xl px-3 py-2 leading-relaxed">整單折扣、優惠券、免稅與退稅會依品項原價比例分攤。加入帳本前仍可修改品名、分類與實付金額。</p>{batches.length === 0 ? <div className="card-soft text-center py-14 text-stone-400"><p className="text-sm">目前沒有待確認的發票</p></div> : batches.map(batch => <article key={batch.id} className="card-soft p-4"><div className="flex gap-3">{batch.receiptImage && <button type="button" onClick={() => openImagePreview(batch.receiptImage)} className="w-16 h-16 rounded-xl overflow-hidden border border-paper-200 bg-white flex-shrink-0" aria-label={`查看 ${batch.merchant} 發票圖片`}><img src={batch.receiptImage} alt={`${batch.merchant} 發票縮圖`} className="w-full h-full object-cover"/></button>}<div className="flex-1 min-w-0"><h2 className="font-bold text-stone-700 truncate">{batch.merchant}</h2><p className="text-[10px] text-stone-400 mt-0.5">{batch.receiptDate || '未辨識日期'} · {batch.items?.length || 0} 項</p><p className="font-extrabold text-ink-600 mt-1">{batch.currency} {Number(batch.total || 0).toLocaleString('zh-TW')}</p>{Number(batch.adjustmentTotal) !== 0 && <p className="text-[10px] text-green-600 mt-0.5">已分攤折扣／退稅 {batch.currency} {Number(batch.adjustmentTotal).toLocaleString('zh-TW')}</p>}</div></div><button type="button" onClick={() => openReview(batch)} className="btn-secondary py-2 text-xs mt-3">確認並選擇帳本</button></article>)}</main>
