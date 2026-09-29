@@ -1303,7 +1303,7 @@
                     if (layer !== 'edit') setEditItem(null);
                     if (layer !== 'purchase') setPurchaseDialog(null);
                     if (layer !== 'image') setPreviewImage('');
-                    if (!layer) setListMode(event.state?.purchaseMode || localStorage.getItem('purchase_list_mode') || 'combined');
+                    if (!layer) setListMode(event.state?.purchaseMode || 'combined');
                 };
                 window.addEventListener('popstate', closeTopLayer);
                 return () => window.removeEventListener('popstate', closeTopLayer);
@@ -1358,6 +1358,7 @@
             };
 
             const changeListMode = mode => {
+                if (!window.history.state?.purchaseMode) window.history.replaceState({ ...(window.history.state || {}), purchaseMode: listMode }, '', window.location.href);
                 setListMode(mode);
                 localStorage.setItem('purchase_list_mode', mode);
                 if (window.history.state?.purchaseMode !== mode) window.history.pushState({ ...(window.history.state || {}), purchaseMode: mode }, '', window.location.href);
